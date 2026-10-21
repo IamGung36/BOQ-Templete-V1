@@ -1,0 +1,3070 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบจัดการ BOQ และฐานข้อมูล (BOQ Template 69.10.16)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Sarabun & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Sarabun', 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .font-mono-num {
+      font-family: 'Inter', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+      }
+      .print-box {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-16">
+
+  <!-- Auth Container (Login / Register) -->
+  <div id="authContainer" class="fixed inset-0 z-[100] bg-slate-900 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] flex items-center justify-center p-4 transition-opacity duration-500">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
+      <div class="p-8 bg-gradient-to-br from-emerald-600 to-teal-800 text-white text-center">
+        <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner mx-auto mb-4 border border-white/20">
+          <i data-lucide="file-spreadsheet" class="w-8 h-8 text-white"></i>
+        </div>
+        <h2 id="authTitle" class="text-2xl font-bold tracking-tight">เข้าสู่ระบบ (Login)</h2>
+        <p class="text-emerald-100 text-sm mt-2">BOQ Form & Cost Database (Template 69.10.16)</p>
+      </div>
+      
+      <div class="p-8">
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="window.authActions.login(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">อีเมล (Email)</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="email" id="logEmail" required class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition" placeholder="admin@sldstudio.com หรือ admin@BOQ.com" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="password" id="logPass" required class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition" placeholder="••••••••" />
+            </div>
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-md shadow-emerald-500/30 transition-all mt-4 cursor-pointer">
+            เข้าสู่ระบบ
+          </button>
+          <div class="text-center mt-4 text-sm text-slate-500">
+            ยังไม่มีบัญชีใช่หรือไม่? <a href="#" onclick="window.authActions.toggleMode('register')" class="text-emerald-600 font-bold hover:underline">สมัครสมาชิกที่นี่</a>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" onsubmit="window.authActions.register(event)" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้ใช้งาน (Display Name)</label>
+            <div class="relative">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="text" id="regName" required class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition" placeholder="ชื่อ-นามสกุล หรือชื่อเล่น" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">อีเมล (Email)</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="email" id="regEmail" required class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition" placeholder="อีเมลของคุณ" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="password" id="regPass" required minlength="6" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition" placeholder="อย่างน้อย 6 ตัวอักษร" />
+            </div>
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold shadow-md shadow-slate-900/20 transition-all mt-4 cursor-pointer">
+            สร้างบัญชีใหม่
+          </button>
+          <div class="text-center mt-4 text-sm text-slate-500">
+            มีบัญชีอยู่แล้ว? <a href="#" onclick="window.authActions.toggleMode('login')" class="text-slate-800 font-bold hover:underline">กลับไปเข้าสู่ระบบ</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification (Moved outside for global access) -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[200] hidden items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border bg-slate-900 text-white border-slate-700 transition-all duration-300">
+    <span id="toastIcon" class="w-5 h-5 text-emerald-400 shrink-0"></span>
+    <span id="toastMessage" class="text-sm font-medium">บันทึกข้อมูลสำเร็จ</span>
+  </div>
+
+  <!-- Main App Wrapper -->
+  <div id="mainAppContainer" class="hidden flex-col flex-1 w-full min-h-screen">
+
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md no-print">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-inner shrink-0">
+            <i data-lucide="file-spreadsheet" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="font-bold text-base sm:text-lg tracking-tight">BOQ Form & Cost Database</h1>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                Template 69.10.16
+              </span>
+            </div>
+            <p id="headerProjectSubtitle" class="text-xs text-slate-400 truncate max-w-xs sm:max-w-lg mt-0.5">
+              BOQ-69-10-16
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="window.appActions.saveAllData()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow transition cursor-pointer">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>บันทึกข้อมูล</span>
+          </button>
+
+          <button onclick="window.appActions.openModal('importExportModal')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs sm:text-sm font-semibold shadow transition cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>ส่งออก / นำเข้า (Excel & HTML)</span>
+          </button>
+
+          <button onclick="window.print()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-medium transition cursor-pointer">
+            <i data-lucide="printer" class="w-4 h-4 text-amber-400"></i>
+            <span class="hidden sm:inline">พิมพ์ใบเสนอราคา</span>
+          </button>
+
+          <!-- User Profile & Logout -->
+          <div class="flex items-center gap-3 ml-2 pl-3 border-l border-slate-700">
+            <div class="text-right hidden md:block">
+              <div id="displayUserName" class="text-sm font-bold text-white leading-tight">User</div>
+              <div id="displayUserRole" class="text-[10px] inline-block px-1.5 py-0.5 rounded bg-slate-700 text-slate-200 font-bold mt-0.5 shadow-sm">User</div>
+            </div>
+            <button onclick="window.authActions.logout()" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 transition cursor-pointer" title="ออกจากระบบ">
+              <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+      
+      <div class="max-w-7xl mx-auto px-4 flex items-center gap-1 overflow-x-auto pt-1 mt-1 border-t border-slate-800/80">
+        <button onclick="window.appActions.switchTab('cover_sheet')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="cover_sheet">
+          <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i>
+          <span>1. Quotation (ใบเสนอราคา)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('external_boq')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="external_boq">
+          <i data-lucide="calculator" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelExtBoq">2. External BOQ (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('internal_boq')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="internal_boq" id="tabBtnIntBoq">
+          <i data-lucide="shield-check" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelIntBoq">3. Internal BOQ (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('cost_code_db')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="cost_code_db" id="tabBtnCostCodeDB">
+          <i data-lucide="database" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelCostCodeDB">4. Cost Code DB (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('vendor_list_db')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="vendor_list_db" id="tabBtnVendorDB">
+          <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelVendorDB">5. Vendor List DB (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('product_code')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="product_code" id="tabBtnProductCode">
+          <i data-lucide="package" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelProductCode">Product Code (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('user_management')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer hidden" data-tab="user_management" id="tabBtnUserMgmt">
+          <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelUserMgmt">User Management (0)</span>
+        </button>
+        <button onclick="window.appActions.switchTab('saved_projects')" class="tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer" data-tab="saved_projects">
+          <i data-lucide="folder-open" class="w-4 h-4 shrink-0"></i>
+          <span id="tabLabelProjects">แฟ้มโครงการ (0)</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="bg-white border-b border-slate-200 shadow-sm no-print">
+      <div class="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="text-xs text-slate-500">รวมค่าวัสดุ (Material Cost)</div>
+          <div id="kpiMaterial" class="text-sm sm:text-base font-bold text-slate-800 mt-0.5">฿0.00</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="text-xs text-slate-500">รวมค่าแรงงาน (Labor Cost)</div>
+          <div id="kpiLabor" class="text-sm sm:text-base font-bold text-slate-800 mt-0.5">฿0.00</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="text-xs text-slate-500">ต้นทุนทางตรง (Direct Cost)</div>
+          <div id="kpiDirect" class="text-sm sm:text-base font-bold text-sky-700 mt-0.5">฿0.00</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div id="kpiFactorLabel" class="text-xs text-slate-500">ค่าดำเนินการ+กำไร (18%)</div>
+          <div id="kpiFactorAmount" class="text-sm sm:text-base font-bold text-amber-700 mt-0.5">฿0.00</div>
+        </div>
+        <div class="col-span-2 md:col-span-1 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+          <div class="text-xs text-emerald-700 font-medium">ราคารวมสุทธิ + VAT 7%</div>
+          <div id="kpiGrandTotal" class="text-base sm:text-lg font-extrabold text-emerald-800 mt-0.5">฿0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto w-full px-4 pt-5 flex-1">
+      <div id="view_cover_sheet" class="tab-view hidden space-y-6"></div>
+      <div id="view_external_boq" class="tab-view hidden space-y-4"></div>
+      <div id="view_internal_boq" class="tab-view hidden space-y-4"></div>
+      <div id="view_cost_code_db" class="tab-view hidden space-y-4"></div>
+      <div id="view_vendor_list_db" class="tab-view hidden space-y-4"></div>
+      <div id="view_product_code" class="tab-view hidden space-y-4"></div>
+      <div id="view_user_management" class="tab-view hidden space-y-4"></div>
+      <div id="view_saved_projects" class="tab-view hidden space-y-4"></div>
+    </main>
+
+    <div id="productPickerModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+      <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="package" class="w-5 h-5 text-sky-400"></i>
+            <h3 class="font-bold text-base">เลือกรายการวัสดุจากฐานข้อมูล Product Code เข้าสู่ BOQ</h3>
+          </div>
+          <button onclick="window.appActions.closeModal('productPickerModal')" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="p-3 border-b border-slate-200 bg-slate-50">
+          <input id="modalProductSearch" type="text" placeholder="ค้นหารหัสวัสดุ ชื่อรายการ หรือยี่ห้อ..." oninput="window.appActions.renderProductPickerList()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div id="modalProductList" class="overflow-y-auto p-4 divide-y divide-slate-200 flex-1"></div>
+      </div>
+    </div>
+
+    <div id="importExportModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+      <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden">
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i>
+            <h3 class="font-bold text-base">ส่งออกและนำเข้าข้อมูล (HTML / Excel CSV / JSON)</h3>
+          </div>
+          <button onclick="window.appActions.closeModal('importExportModal')" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="p-4 rounded-xl bg-sky-50 border border-sky-200 space-y-2">
+            <div class="font-bold text-sm text-sky-900">1. ดาวน์โหลดเป็นไฟล์เว็บ (.html) พร้อมข้อมูลที่แก้ไขล่าสุด</div>
+            <p class="text-xs text-sky-700">บันทึกไฟล์เว็บแอปนี้ลงเครื่องคอมพิวเตอร์ เพื่อเปิดดูและแก้ไขต่อใน Google Chrome / Edge ได้ทุกที่</p>
+            <button onclick="window.appActions.exportSelfContainedHTML()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="globe" class="w-4 h-4"></i>
+              <span>ดาวน์โหลดไฟล์เว็บแอป (.html)</span>
+            </button>
+          </div>
+
+          <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+            <div class="font-bold text-sm text-emerald-900">2. ส่งออกตารางไปเปิดใน Microsoft Excel (.csv) หรือสำรองฐานข้อมูล (.json)</div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button onclick="window.appActions.exportBoqCSV()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>ดาวน์โหลด Cost BOQ (.csv)</span>
+              </button>
+              <button onclick="window.appActions.exportFullJSON()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="database" class="w-4 h-4 text-sky-400"></i>
+                <span>สำรองฐานข้อมูลทั้งหมด (.json)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <div class="font-bold text-sm text-slate-800">3. นำเข้าไฟล์ตาราง BOQ (.csv) หรือไฟล์ฐานข้อมูล (.json)</div>
+            <input id="fileImportInput" type="file" accept=".csv,.json" onchange="window.appActions.handleImportFile(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End mainAppContainer -->
+
+  <script type="module">
+    // URL สำหรับส่งข้อมูลไปยัง Google Sheet
+    const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzaACqPtv8pPTXUwv0JEKcJd3EbBsIy9UyM3HIkfSCP9stVpBonnItv8vqWK6lOLQkDfA/exec';
+    
+    // กำหนด Email ของ Admin สำหรับ Local System
+    const ADMIN_EMAILS = ['admin@sldstudio.com', 'admin@BOQ.com', 'admin@admin.com']; 
+
+    // Data Definitions
+    const INITIAL_COST_CODES = [
+      { id: 'cc-1', costCode: '010', categoryName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL' },
+      { id: 'cc-2', costCode: '020', categoryName: 'INVERTER & OPTIMIZER & DATA LOGGER', subCostCode: '021', subCostCodeName: 'INVERTER' },
+      { id: 'cc-3', costCode: '020', categoryName: 'INVERTER & OPTIMIZER & DATA LOGGER', subCostCode: '022', subCostCodeName: 'OPTIMIZER' },
+      { id: 'cc-4', costCode: '020', categoryName: 'INVERTER & OPTIMIZER & DATA LOGGER', subCostCode: '023', subCostCodeName: 'DATA LOGGER' },
+      { id: 'cc-5', costCode: '030', categoryName: 'RSD & EMERGENCY SWITCH', subCostCode: '031', subCostCodeName: 'RSD' },
+      { id: 'cc-6', costCode: '030', categoryName: 'RSD & EMERGENCY SWITCH', subCostCode: '032', subCostCodeName: 'EMERGENCY SWITCH' },
+      { id: 'cc-7', costCode: '040', categoryName: 'BESS SYSTEM', subCostCode: '041', subCostCodeName: 'BESS SYSTEM' },
+      { id: 'cc-8', costCode: '040', categoryName: 'BESS SYSTEM', subCostCode: '042', subCostCodeName: 'BATTERY' },
+      { id: 'cc-9', costCode: '040', categoryName: 'BESS SYSTEM', subCostCode: '043', subCostCodeName: 'PCS' },
+      { id: 'cc-10', costCode: '050', categoryName: 'MOUNTING & PILLING', subCostCode: '051', subCostCodeName: 'MOUNTING' },
+      { id: 'cc-11', costCode: '050', categoryName: 'MOUNTING & PILLING', subCostCode: '052', subCostCodeName: 'PILLING' },
+      { id: 'cc-12', costCode: '060', categoryName: 'MONITORING SYSTEM', subCostCode: '061', subCostCodeName: 'MONITORING SYSTEM' },
+      { id: 'cc-13', costCode: '070', categoryName: 'DC EQUIPMENT', subCostCode: '071', subCostCodeName: 'DC EQUIPMENT' },
+      { id: 'cc-14', costCode: '080', categoryName: 'LV EQUIPMENT', subCostCode: '081', subCostCodeName: 'LV EQUIPMENT' },
+      { id: 'cc-15', costCode: '090', categoryName: 'MV EQUIPMENT', subCostCode: '091', subCostCodeName: 'MV EQUIPMENT' },
+      { id: 'cc-16', costCode: '100', categoryName: 'CABLE', subCostCode: '101', subCostCodeName: 'CABLE' },
+      { id: 'cc-17', costCode: '110', categoryName: 'RACEWAY', subCostCode: '111', subCostCodeName: 'RACEWAY' },
+      { id: 'cc-18', costCode: '120', categoryName: 'GROUNDING & LIGHTNING', subCostCode: '121', subCostCodeName: 'GROUNDING & LIGHTNING' },
+      { id: 'cc-19', costCode: '130', categoryName: 'PQ/RELAY/ZERO EXPORT', subCostCode: '131', subCostCodeName: 'PQ/RELAY/ZERO EXPORT' },
+      { id: 'cc-20', costCode: '140', categoryName: 'STRUCTURE', subCostCode: '141', subCostCodeName: 'STRUCTURE' },
+      { id: 'cc-21', costCode: '150', categoryName: 'FACILITIES FOR PROJECT', subCostCode: '151', subCostCodeName: 'FACILITIES FOR PROJECT' },
+      { id: 'cc-22', costCode: '160', categoryName: 'EARTHWORK', subCostCode: '161', subCostCodeName: 'EARTHWORK' },
+      { id: 'cc-23', costCode: '170', categoryName: 'EHS WORK & SAFETY', subCostCode: '171', subCostCodeName: 'EHS WORK & SAFETY' },
+      { id: 'cc-24', costCode: '180', categoryName: 'PV CLEANING SYSTEM', subCostCode: '181', subCostCodeName: 'PV CLEANING SYSTEM' },
+      { id: 'cc-25', costCode: '190', categoryName: 'ENGINEERING SERVICE', subCostCode: '191', subCostCodeName: 'ENGINEERING SERVICE' },
+      { id: 'cc-26', costCode: '200', categoryName: 'PROJECT MANAGEMENT', subCostCode: '201', subCostCodeName: 'PROJECT MANAGEMENT' },
+      { id: 'cc-27', costCode: '210', categoryName: 'TEST COMMISSIONING', subCostCode: '211', subCostCodeName: 'TEST COMMISSIONING' },
+      { id: 'cc-28', costCode: '220', categoryName: 'O&M', subCostCode: '221', subCostCodeName: 'O&M' },
+      { id: 'cc-29', costCode: '230', categoryName: 'PERMIT', subCostCode: '231', subCostCodeName: 'PERMIT' },
+      { id: 'cc-30', costCode: '240', categoryName: 'INSTALLATION', subCostCode: '241', subCostCodeName: 'INSTALLATION' },
+      { id: 'cc-31', costCode: '250', categoryName: 'IMPORT TAX', subCostCode: '251', subCostCodeName: 'IMPORT TAX' },
+      { id: 'cc-32', costCode: '260', categoryName: 'OTHER', subCostCode: '261', subCostCodeName: 'OTHER' }
+    ];
+
+    const INITIAL_VENDORS = [
+      { id: 'v-1', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorNo: 'V010001', vendorName: 'AIKO SOLAR', contactName1: 'คุณกิตติ', phone1: '081-123-4567', email1: 'sales@aikosolar.com', note1: 'Sale Manager', cardImage1: '', contactName2: 'คุณสมชาย', phone2: '082-222-3333', email2: 'somchai@aikosolar.com', note2: 'Technical Support', cardImage2: '' },
+      { id: 'v-2', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorNo: 'V010002', vendorName: 'GCL', contactName1: 'คุณสุชาติ', phone1: '082-987-6543', email1: 'contact@gcl.com', note1: 'Sales', cardImage1: '', contactName2: '', phone2: '', email2: '', note2: '', cardImage2: '' },
+      { id: 'v-3', costCode: '020', costCodeName: 'INVERTER & OPTIMIZER & DATA LOGGER', subCostCode: '021', subCostCodeName: 'INVERTER', vendorNo: 'V020001', vendorName: 'HUAWEI', contactName1: '-', phone1: '-', email1: 'support.th@huawei.com', note1: '', cardImage1: '', contactName2: '', phone2: '', email2: '', note2: '', cardImage2: '' }
+    ];
+
+    const INITIAL_PRODUCT_CODES = [
+      { id: 'pc-1', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorId: 'V010001', vendorName: 'AIKO SOLAR', brand: 'AIKO SOLAR', spec: '', productCode: 'P010011V0100010001', name: 'SOLAR PANEL-Mono / N-type / C&I_665 Wp_AIKO S', unit: 'Ea', matUnitPrice: 4200, labUnitPrice: 350, updatedAt: '2026-10-20', quotationFile: '', priceHistory: [] },
+      { id: 'pc-2', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorId: 'V010001', vendorName: 'AIKO SOLAR', brand: 'AIKO SOLAR', spec: '', productCode: 'P010011V0100010002', name: 'SOLAR PANEL-Mono / N-type / C&I_660 Wp_AIKO S', unit: 'Ea', matUnitPrice: 4100, labUnitPrice: 350, updatedAt: '2026-10-20', quotationFile: '', priceHistory: [] },
+      { id: 'pc-3', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorId: 'V010001', vendorName: 'AIKO SOLAR', brand: 'AIKO SOLAR', spec: '', productCode: 'P010011V0100010009', name: 'SOLAR PANEL-Mono / N-type / Utility_650 Wp_AIKO', unit: 'Ea', matUnitPrice: 4500, labUnitPrice: 350, updatedAt: '2026-10-20', quotationFile: '', priceHistory: [] },
+      { id: 'pc-4', costCode: '010', costCodeName: 'SOLAR PANEL', subCostCode: '011', subCostCodeName: 'SOLAR PANEL', vendorId: 'V010002', vendorName: 'GCL', brand: 'GCL', spec: '', productCode: 'P010011V0100020025', name: 'SOLAR PANEL-Mono / N-type / Bifacial_610 Wp_GCL', unit: 'Ea', matUnitPrice: 3800, labUnitPrice: 350, updatedAt: '2026-10-20', quotationFile: '', priceHistory: [] }
+    ];
+
+    const INITIAL_USERS = [
+      { uid: 'u-1', name: 'System Administrator', email: 'admin@admin.com', role: 'Admin', status: 'Approved' },
+      { uid: 'u-2', name: 'surasak', email: 'surasakng36@gmail.com', role: 'Admin', status: 'Approved' },
+      { uid: 'u-3', name: 'gung', email: 'gung1125@gmail.com', role: 'User', status: 'Approved' },
+      { uid: 'u-4', name: 'Patiparn', email: 'patiparn.bu@gmail.com', role: 'Viewer', status: 'Approved' }
+    ];
+
+    const createDefaultProject = () => ({
+      id: 'proj-69-10-16',
+      companyLogo: '',
+      sellerCompany: 'บริษัท วิศวกรรมและก่อสร้าง จำกัด (สำนักงานใหญ่)',
+      sellerAddress: '2571/1 ซ.รามคำแหง 75 ถ.รามคำแหง แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240',
+      sellerContact: 'โทร. 0-2739-5900 โทรสาร 0-2739-5910 เลขประจำตัวผู้เสียภาษี 0105556111000',
+      quotationNo: 'QU6910-00001',
+      docDate: '2026-10-16',
+      quotationType: 'For Bidding',
+      revision: 'Rev.01 (69.10.16)',
+      contactName: 'คุณกาญจนา ณ ศิริ',
+      clientName: 'บริษัท พัฒนาสินทรัพย์ไทย จำกัด (มหาชน)',
+      clientAddress: '99/12 ถ.แจ้งวัฒนะ ต.คลองเกลือ อ.ปากเกร็ด จ.นนทบุรี 11120',
+      clientTaxId: '0107556000999',
+      clientPhone: '02-555-0199',
+      clientEmail: 'kanjana@thaiprop.co.th',
+      coordinatorName: 'คุณวิศรุต ประเมินกิจ',
+      coordinatorPhone: '081-234-5678',
+      coordinatorEmail: 'wisarut@engconstruct.co.th',
+      validityDays: 30,
+      projectCode: 'BOQ-69-10-16',
+      projectName: 'โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ 500kW',
+      location: 'อ.ปากเกร็ด จ.นนทบุรี',
+      preparedBy: 'นายวิศรุต ประเมินกิจ (QS Engineer)',
+      preparedDate: '2026-10-16',
+      checkedBy: 'นายกิตติพงศ์ บริหารงาน (Project Director)',
+      checkedDate: '2026-10-16',
+      overheadPercent: 10.0,
+      profitPercent: 8.0,
+      discountAmount: 0,
+      vatPercent: 7.0,
+      remarks: '1. ราคานี้รวมค่าวัสดุ ค่าแรงงาน และค่าดำเนินการตามรายการที่ระบุใน BOQ\n2. ยืนยันราคาภายในกำหนดระยะเวลาที่ระบุ นับจากวันที่ออกเอกสาร',
+      updatedAt: new Date().toISOString(),
+      items: [
+        { id: 'item-1', itemNo: '1', costCode: '010', productCode: 'P010011V0100010001', description: 'SOLAR PANEL-Mono / N-type / C&I_665 Wp_AIKO S', unit: 'Ea', qty: 900, matUnitPrice: 4200, labUnitPrice: 350, note: 'Tier 1 Manufacturer' }
+      ]
+    });
+
+    const embeddedSnapshot = window.__EMBEDDED_BOQ_STATE__ || null;
+
+    const state = {
+      activeTab: 'cover_sheet',
+      project: embeddedSnapshot?.project || createDefaultProject(),
+      savedProjects: embeddedSnapshot?.savedProjects || [createDefaultProject()],
+      costCodes: embeddedSnapshot?.costCodes || INITIAL_COST_CODES,
+      productCodes: embeddedSnapshot?.productCodes || INITIAL_PRODUCT_CODES,
+      vendors: embeddedSnapshot?.vendors || INITIAL_VENDORS,
+      boqSearch: '',
+      boqCategoryFilter: 'ALL',
+      costCodeSearch: '',
+      vendorSearch: '',
+      productSearch: '',
+      deletingVendorId: null,
+      editingVendorId: null,
+      editingProductId: null,
+      appUsers: embeddedSnapshot?.appUsers || INITIAL_USERS,
+      currentUserProfile: { role: 'Viewer', status: 'Pending' }
+    };
+
+    window.__updateCurrentUserProfile = (profile) => {
+        state.currentUserProfile = profile;
+        renderAll();
+    };
+
+    window.__updateAppUsersList = (list) => {
+        state.appUsers = list;
+        if (state.activeTab === 'user_management') renderUserManagement();
+        const umLabel = document.getElementById('tabLabelUserMgmt');
+        if (umLabel) umLabel.textContent = `User Management (${list.length})`;
+    };
+
+    const formatCurrency = (num) => {
+      const value = Number(num) || 0;
+      return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const escapeHtml = (str) => {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+
+    const toThaiBahtText = (amount) => {
+      const num = Number(amount);
+      if (isNaN(num) || num <= 0) return '( ศูนย์บาทถ้วน )';
+      const thaiNum = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+      const thaiUnit = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+
+      const convertInteger = (str) => {
+        let res = '';
+        const len = str.length;
+        for (let i = 0; i < len; i++) {
+          const digit = parseInt(str[i], 10);
+          const pos = len - i - 1;
+          const unitPos = pos % 6;
+          if (digit !== 0) {
+            if (unitPos === 1 && digit === 1) res += 'สิบ';
+            else if (unitPos === 1 && digit === 2) res += 'ยี่สิบ';
+            else if (unitPos === 0 && digit === 1 && len > 1 && str[i - 1] !== '0') res += 'เอ็ด';
+            else res += thaiNum[digit] + thaiUnit[unitPos];
+          }
+          if (pos > 0 && unitPos === 0) res += 'ล้าน';
+        }
+        return res || 'ศูนย์';
+      };
+
+      const parts = num.toFixed(2).split('.');
+      const bahtText = convertInteger(parts[0]) + 'บาท';
+      const satang = parseInt(parts[1], 10);
+      const satangText = satang === 0 ? 'ถ้วน' : convertInteger(String(satang)) + 'สตางค์';
+      return '( ' + bahtText + satangText + ' )';
+    };
+
+    // Toast logic is now unified
+    const showToast = (msg, isError = false) => {
+      const box = document.getElementById('toastContainer');
+      const text = document.getElementById('toastMessage');
+      const icon = document.getElementById('toastIcon');
+      if (!box || !text) return;
+      text.textContent = msg;
+      icon.innerHTML = isError
+        ? '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>'
+        : '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>';
+      box.classList.remove('hidden');
+      box.classList.add('flex');
+      if (window.lucide) window.lucide.createIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+      }, 3200);
+    };
+    
+    // For Auth, we map it to the same toast function
+    const showAuthToast = showToast;
+
+    const computeBoqSummary = () => {
+      const items = state.project.items || [];
+      let totalMaterial = 0;
+      let totalLabor = 0;
+      let totalDirect = 0;
+
+      const categoryMap = {};
+      state.costCodes.forEach((cc) => {
+        categoryMap[cc.costCode] = {
+          costCode: cc.costCode,
+          categoryName: cc.categoryName,
+          matTotal: 0,
+          labTotal: 0,
+          directTotal: 0,
+          itemCount: 0
+        };
+      });
+
+      const factorMultiplier = 1 + (Number(state.project.overheadPercent || 0) + Number(state.project.profitPercent || 0)) / 100;
+
+      items.forEach((it) => {
+        const qty = Number(it.qty) || 0;
+        const matU = Number(it.matUnitPrice) || 0;
+        const labU = Number(it.labUnitPrice) || 0;
+        const matSum = qty * matU;
+        const labSum = qty * labU;
+        const directSum = matSum + labSum;
+
+        totalMaterial += matSum;
+        totalLabor += labSum;
+        totalDirect += directSum;
+
+        const key = it.costCode || '010';
+        if (!categoryMap[key]) {
+          categoryMap[key] = {
+            costCode: key,
+            categoryName: 'หมวดงานอื่นๆ (' + key + ')',
+            matTotal: 0,
+            labTotal: 0,
+            directTotal: 0,
+            itemCount: 0
+          };
+        }
+        categoryMap[key].matTotal += matSum;
+        categoryMap[key].labTotal += labSum;
+        categoryMap[key].directTotal += directSum;
+        categoryMap[key].itemCount += 1;
+      });
+
+      const overheadAmount = totalDirect * (Number(state.project.overheadPercent || 0) / 100);
+      const profitAmount = totalDirect * (Number(state.project.profitPercent || 0) / 100);
+      const totalBeforeDiscount = totalDirect + overheadAmount + profitAmount;
+      const discount = Number(state.project.discountAmount) || 0;
+      const subTotalAfterDiscount = Math.max(0, totalBeforeDiscount - discount);
+      const vatAmount = subTotalAfterDiscount * (Number(state.project.vatPercent || 0) / 100);
+      const grandTotal = subTotalAfterDiscount + vatAmount;
+
+      return {
+        totalMaterial,
+        totalLabor,
+        totalDirect,
+        overheadAmount,
+        profitAmount,
+        factorMultiplier,
+        discount,
+        subTotalAfterDiscount,
+        vatAmount,
+        grandTotal,
+        categories: Object.values(categoryMap)
+      };
+    };
+
+    const renderHeaderAndKpis = (summary) => {
+      const itemCount = state.project.items?.length || 0;
+      document.getElementById('headerProjectSubtitle').textContent = `${state.project.projectCode} — ${state.project.projectName}`;
+      document.getElementById('tabLabelExtBoq').textContent = `2. External BOQ (${itemCount})`;
+      
+      const role = state.currentUserProfile?.role || 'Viewer';
+      const isApproved = state.currentUserProfile?.status === 'Approved' || role === 'Admin';
+      const canSeePricing = role !== 'Viewer' && isApproved;
+      const isManager = (role === 'Admin' || role === 'PM') && isApproved;
+
+      // Update Profile UI
+      const roleEl = document.getElementById('displayUserRole');
+      if (roleEl) {
+          roleEl.textContent = role;
+          if (role === 'Admin') roleEl.className = 'text-[10px] inline-block px-1.5 py-0.5 rounded bg-rose-600 text-white font-bold mt-0.5 shadow-sm';
+          else if (role === 'PM') roleEl.className = 'text-[10px] inline-block px-1.5 py-0.5 rounded bg-purple-600 text-white font-bold mt-0.5 shadow-sm';
+          else if (role === 'User') roleEl.className = 'text-[10px] inline-block px-1.5 py-0.5 rounded bg-sky-600 text-white font-bold mt-0.5 shadow-sm';
+          else roleEl.className = 'text-[10px] inline-block px-1.5 py-0.5 rounded bg-slate-500 text-white font-bold mt-0.5 shadow-sm';
+      }
+
+      // Handle Tab Visibilities
+      const toggleTab = (id, show) => {
+          const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+          if (btn) btn.style.display = show ? 'flex' : 'none';
+      };
+
+      toggleTab('internal_boq', canSeePricing);
+      toggleTab('cost_code_db', canSeePricing);
+      toggleTab('product_code', canSeePricing);
+      
+      const umBtn = document.getElementById('tabBtnUserMgmt');
+      if (umBtn) umBtn.style.display = isManager ? 'flex' : 'none';
+
+      // Fallback redirection if restricted tab is active
+      if (!canSeePricing && ['internal_boq', 'cost_code_db', 'product_code'].includes(state.activeTab)) {
+          window.appActions.switchTab('cover_sheet');
+      }
+      if (!isManager && state.activeTab === 'user_management') {
+          window.appActions.switchTab('cover_sheet');
+      }
+      
+      const internalLabel = document.getElementById('tabLabelIntBoq');
+      if (internalLabel) internalLabel.textContent = `3. Internal BOQ (${itemCount})`;
+      const costCodeLabel = document.getElementById('tabLabelCostCodeDB');
+      if (costCodeLabel) costCodeLabel.textContent = `4. Cost Code DB (${state.costCodes.length})`;
+      const vendorLabel = document.getElementById('tabLabelVendorDB');
+      if (vendorLabel) vendorLabel.textContent = `5. Vendor List DB (${state.vendors.length})`;
+      const productCodeLabel = document.getElementById('tabLabelProductCode');
+      if (productCodeLabel) productCodeLabel.textContent = `Product Code (${state.productCodes?.length || 0})`;
+      document.getElementById('tabLabelProjects').textContent = `แฟ้มโครงการ (${state.savedProjects.length})`;
+      const umLabel = document.getElementById('tabLabelUserMgmt');
+      if (umLabel) umLabel.textContent = `User Management (${state.appUsers.length})`;
+
+      document.getElementById('kpiMaterial').textContent = '฿' + formatCurrency(summary.totalMaterial);
+      document.getElementById('kpiLabor').textContent = '฿' + formatCurrency(summary.totalLabor);
+      document.getElementById('kpiDirect').textContent = '฿' + formatCurrency(summary.totalDirect);
+      const factorPct = Number(state.project.overheadPercent || 0) + Number(state.project.profitPercent || 0);
+      document.getElementById('kpiFactorLabel').textContent = `ค่าดำเนินการ+กำไร (${factorPct}%)`;
+      document.getElementById('kpiFactorAmount').textContent = '฿' + formatCurrency(summary.overheadAmount + summary.profitAmount);
+      document.getElementById('kpiGrandTotal').textContent = '฿' + formatCurrency(summary.grandTotal);
+
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        const isCurrent = btn.getAttribute('data-tab') === state.activeTab;
+        btn.className = `tab-btn flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-t-xl whitespace-nowrap transition border-b-2 cursor-pointer ${
+          isCurrent
+            ? 'bg-slate-50 text-emerald-700 border-emerald-500 font-bold'
+            : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border-transparent'
+        }`;
+      });
+
+      document.querySelectorAll('.tab-view').forEach((view) => {
+        if (view.id === `view_${state.activeTab}`) {
+          view.classList.remove('hidden');
+        } else {
+          view.classList.add('hidden');
+        }
+      });
+    };
+
+    const computeExpireDateText = (docDateStr, validityDays) => {
+      if (!docDateStr) return '-';
+      const dt = new Date(docDateStr);
+      if (isNaN(dt.getTime())) return '-';
+      dt.setDate(dt.getDate() + (Number(validityDays) || 0));
+      const dd = String(dt.getDate()).padStart(2, '0');
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const yyyy = dt.getFullYear() + 543;
+      return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const renderCoverSheet = (summary) => {
+      const container = document.getElementById('view_cover_sheet');
+      if(!container) return;
+      const p = state.project;
+      const expireDateDisplay = computeExpireDateText(p.docDate, p.validityDays ?? 30);
+      const quotationTypes = ['None Binding Offer', 'For Budgetary', 'For Bidding', 'Precheck'];
+      const quotationTypeOptions = quotationTypes
+        .map((t) => `<option value="${escapeHtml(t)}" ${(p.quotationType || 'For Bidding') === t ? 'selected' : ''}>${escapeHtml(t)}</option>`)
+        .join('');
+
+      const totalSellingBeforeDiscount = summary.totalDirect * summary.factorMultiplier;
+
+      const tableRowsHtml = summary.categories
+        .map((cat, idx) => {
+          const catSelling = cat.directTotal * summary.factorMultiplier;
+          return `
+            <tr class="hover:bg-blue-50/40 border-b border-blue-200/70">
+              <td class="py-2.5 px-2 text-center font-mono-num font-bold text-slate-700 border-r border-blue-300">${idx + 1}</td>
+              <td class="py-2.5 px-3 text-center font-mono-num font-bold text-blue-900 border-r border-blue-300">${escapeHtml(cat.costCode)}</td>
+              <td class="py-2.5 px-3 border-r border-blue-300">
+                <div class="font-semibold text-slate-900">${escapeHtml(cat.categoryName)}</div>
+                <div class="text-xs text-slate-500">(${cat.itemCount} รายการย่อยใน BOQ)</div>
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono-num border-r border-blue-300">1.00</td>
+              <td class="py-2.5 px-2 text-center border-r border-blue-300">งาน</td>
+              <td class="py-2.5 px-3 text-right font-mono-num border-r border-blue-300">${formatCurrency(catSelling)}</td>
+              <td class="py-2.5 px-2 text-right font-mono-num border-r border-blue-300 text-slate-500">-</td>
+              <td class="py-2.5 px-3 text-right font-mono-num font-bold text-slate-900">${formatCurrency(catSelling)}</td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-3 no-print mb-6">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md">Sheet 1 : Quotation</span>
+            <span class="text-sm font-bold text-slate-800">ใบเสนอราคา (Quotation)</span>
+          </div>
+        </div>
+
+        <div class="bg-white shadow-sm border border-slate-300 p-8 print-box mx-auto w-full relative">
+          <!-- Logo & Company Name -->
+          <div class="flex justify-between items-start mb-6">
+            <div class="flex items-start gap-4">
+              <div class="relative group cursor-pointer">
+                <input type="file" id="logoUpload" accept="image/*" onchange="window.appActions.handleLogoUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="อัปโหลดโลโก้บริษัท" />
+                <div class="w-24 h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center overflow-hidden bg-slate-50 relative group-hover:border-blue-500 transition">
+                  ${p.companyLogo ? `<img src="${p.companyLogo}" class="w-full h-full object-contain" alt="Company Logo" />` : '<div class="text-xs text-slate-400 text-center px-2">เพิ่มรูปโลโก้บริษัท</div>'}
+                </div>
+                ${p.companyLogo ? `<button onclick="window.appActions.removeCompanyLogo(); document.getElementById('logoUpload').value=''" class="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow hidden group-hover:block z-20"><i data-lucide="x" class="w-3 h-3"></i></button>` : ''}
+              </div>
+              <div>
+                <input type="text" value="${escapeHtml(p.sellerCompany || '')}" onchange="window.appActions.updateProjectField('sellerCompany', this.value)" class="text-lg font-bold text-slate-900 w-full min-w-[300px] border border-transparent hover:border-slate-300 focus:border-blue-600 rounded px-2 py-1 focus:outline-none" />
+                <textarea rows="2" onchange="window.appActions.updateProjectField('sellerAddress', this.value)" class="w-full min-w-[300px] text-xs text-slate-700 border border-transparent hover:border-slate-300 focus:border-blue-600 rounded px-2 py-1 focus:outline-none">${escapeHtml(p.sellerAddress || '')}</textarea>
+                <textarea rows="2" onchange="window.appActions.updateProjectField('sellerContact', this.value)" class="w-full min-w-[300px] text-xs text-slate-700 border border-transparent hover:border-slate-300 focus:border-blue-600 rounded px-2 py-1 focus:outline-none">${escapeHtml(p.sellerContact || '')}</textarea>
+              </div>
+            </div>
+            
+            <div class="text-center">
+              <h2 class="text-2xl font-bold text-blue-900 tracking-wide">ใบเสนอราคา</h2>
+              <h3 class="text-xs font-bold text-blue-700 tracking-widest uppercase">QUOTATION & COST ESTIMATE</h3>
+            </div>
+
+            <div class="border-2 border-slate-800 rounded-xl overflow-hidden min-w-[280px]">
+              <div class="grid grid-cols-12 border-b border-slate-300 items-center text-xs">
+                <div class="col-span-5 px-3 py-2 font-bold text-slate-800 bg-slate-100 border-r border-slate-300">เลขที่ (No.)</div>
+                <div class="col-span-7 px-2 py-1">
+                  <input type="text" value="${escapeHtml(p.quotationNo || '')}" onchange="window.appActions.updateProjectField('quotationNo', this.value)" class="w-full font-mono-num font-bold text-slate-900 px-1.5 py-0.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-none" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 border-b border-slate-300 items-center text-xs">
+                <div class="col-span-5 px-3 py-2 font-bold text-slate-800 bg-slate-100 border-r border-slate-300">วันที่ออกเอกสาร</div>
+                <div class="col-span-7 px-2 py-1">
+                  <input type="date" value="${escapeHtml(p.docDate || '')}" onchange="window.appActions.updateProjectField('docDate', this.value)" class="w-full font-mono-num text-slate-800 px-1.5 py-0.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-none cursor-pointer" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 border-b border-slate-300 items-center text-xs">
+                <div class="col-span-5 px-3 py-2 font-bold text-slate-800 bg-slate-100 border-r border-slate-300">ประเภทเอกสาร</div>
+                <div class="col-span-7 px-2 py-1">
+                  <select onchange="window.appActions.updateProjectField('quotationType', this.value)" class="w-full px-1.5 py-0.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-600 font-semibold text-emerald-700 bg-transparent focus:outline-none cursor-pointer">
+                    ${quotationTypeOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-center text-xs">
+                <div class="col-span-5 px-3 py-2 font-bold text-slate-800 bg-slate-100 border-r border-slate-300">ครั้งที่แก้ไข</div>
+                <div class="col-span-7 px-2 py-1">
+                  <input type="text" value="${escapeHtml(p.revision || '')}" onchange="window.appActions.updateProjectField('revision', this.value)" class="w-full font-mono-num text-slate-800 px-1.5 py-0.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer & Project Info Boxes -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-4 text-xs sm:text-sm">
+            <div class="lg:col-span-6 border-2 border-slate-700 rounded-xl p-3.5 space-y-2">
+              <div class="grid grid-cols-12 items-center gap-2">
+                <label class="col-span-4 font-bold text-slate-800">ชื่อลูกค้า (ผู้ติดต่อ)</label>
+                <div class="col-span-8">
+                  <input type="text" value="${escapeHtml(p.contactName || '')}" onchange="window.appActions.updateProjectField('contactName', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none font-medium text-slate-900" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-center gap-2">
+                <label class="col-span-4 font-bold text-slate-800">ชื่อบ.ลูกค้า</label>
+                <div class="col-span-8">
+                  <input type="text" value="${escapeHtml(p.clientName || '')}" onchange="window.appActions.updateProjectField('clientName', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none font-semibold text-slate-900" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-start gap-2">
+                <label class="col-span-4 font-bold text-slate-800 pt-1">ที่อยู่บ.ลูกค้า</label>
+                <div class="col-span-8">
+                  <textarea rows="2" onchange="window.appActions.updateProjectField('clientAddress', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800">${escapeHtml(p.clientAddress || '')}</textarea>
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-center gap-2">
+                <label class="col-span-4 font-bold text-slate-800">เลขประจำตัวผู้เสียภาษี</label>
+                <div class="col-span-8">
+                  <input type="text" value="${escapeHtml(p.clientTaxId || '')}" onchange="window.appActions.updateProjectField('clientTaxId', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none font-mono-num text-slate-800" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-center gap-2">
+                <label class="col-span-4 font-bold text-slate-800">เบอร์โทร</label>
+                <div class="col-span-8">
+                  <input type="text" value="${escapeHtml(p.clientPhone || '')}" onchange="window.appActions.updateProjectField('clientPhone', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800 font-mono-num" />
+                </div>
+              </div>
+              <div class="grid grid-cols-12 items-center gap-2">
+                <label class="col-span-4 font-bold text-slate-800">อีเมล</label>
+                <div class="col-span-8">
+                  <input type="text" value="${escapeHtml(p.clientEmail || '')}" onchange="window.appActions.updateProjectField('clientEmail', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800" />
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-6 border-2 border-slate-700 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
+              <div class="space-y-2">
+                <div class="grid grid-cols-12 items-center gap-2">
+                  <label class="col-span-4 font-bold text-slate-800">รหัสโครงการ</label>
+                  <div class="col-span-8">
+                    <input type="text" value="${escapeHtml(p.projectCode || '')}" onchange="window.appActions.updateProjectField('projectCode', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none font-mono-num font-bold text-blue-900" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-12 items-center gap-2">
+                  <label class="col-span-4 font-bold text-slate-800">ชื่อโครงการ</label>
+                  <div class="col-span-8">
+                    <input type="text" value="${escapeHtml(p.projectName || '')}" onchange="window.appActions.updateProjectField('projectName', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none font-semibold text-slate-900" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-12 items-center gap-2">
+                  <label class="col-span-4 font-bold text-slate-800">สถานที่จัดส่ง/ที่ตั้ง</label>
+                  <div class="col-span-8">
+                    <input type="text" value="${escapeHtml(p.location || '')}" onchange="window.appActions.updateProjectField('location', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800" />
+                  </div>
+                </div>
+
+                <!-- Coordinator Section -->
+                <div class="pt-1.5 border-t border-slate-200 space-y-1.5">
+                  <div class="grid grid-cols-12 items-center gap-2">
+                    <label class="col-span-4 font-bold text-slate-800">ผู้ประสานงาน</label>
+                    <div class="col-span-8">
+                      <input type="text" value="${escapeHtml(p.coordinatorName || '')}" placeholder="ชื่อผู้ประสานงาน..." onchange="window.appActions.updateProjectField('coordinatorName', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-900 font-medium" />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-12 items-center gap-2">
+                    <label class="col-span-4 font-bold text-slate-800">เบอร์โทรผู้ประสานงาน</label>
+                    <div class="col-span-8">
+                      <input type="text" value="${escapeHtml(p.coordinatorPhone || '')}" placeholder="เบอร์โทร..." onchange="window.appActions.updateProjectField('coordinatorPhone', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800 font-mono-num" />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-12 items-center gap-2">
+                    <label class="col-span-4 font-bold text-slate-800">อีเมลผู้ประสานงาน</label>
+                    <div class="col-span-8">
+                      <input type="text" value="${escapeHtml(p.coordinatorEmail || '')}" placeholder="อีเมล..." onchange="window.appActions.updateProjectField('coordinatorEmail', this.value)" class="w-full px-2.5 py-1 rounded border border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none text-slate-800" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-12 items-center gap-2 pt-2 border-t border-slate-200">
+                <label class="col-span-4 font-bold text-slate-800">ยืนราคา (วัน)</label>
+                <div class="col-span-8 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <input type="number" value="${Number(p.validityDays) || 30}" onchange="window.appActions.updateProjectField('validityDays', Number(this.value))" class="w-16 px-2 py-1 rounded border border-slate-200 font-mono-num text-center font-bold text-slate-900" />
+                    <span class="text-slate-700">วัน</span>
+                  </div>
+                  <div class="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                    Expire Date: <span class="font-mono-num text-blue-800">${expireDateDisplay}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quotation Table -->
+          <div class="border-2 border-slate-800 rounded-xl overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs sm:text-sm text-left border-collapse">
+                <thead class="bg-slate-100 text-slate-900 border-b-2 border-slate-800 text-xs font-bold">
+                  <tr>
+                    <th class="py-2.5 px-2 w-16 text-center border-r border-blue-400">ลำดับ</th>
+                    <th class="py-2.5 px-3 w-28 text-center border-r border-blue-400">รหัสหมวด</th>
+                    <th class="py-2.5 px-3 min-w-[240px] border-r border-blue-400 text-center">รายการ (Description)</th>
+                    <th class="py-2.5 px-3 w-24 text-right border-r border-blue-400">จำนวน</th>
+                    <th class="py-2.5 px-2 w-20 text-center border-r border-blue-400">หน่วย</th>
+                    <th class="py-2.5 px-3 w-32 text-right border-r border-blue-400">ราคา/หน่วย</th>
+                    <th class="py-2.5 px-2 w-24 text-right border-r border-blue-400">ส่วนลด</th>
+                    <th class="py-2.5 px-3 w-36 text-right">จำนวนเงิน</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-blue-200 min-h-[240px]">
+                  ${tableRowsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Remarks & Financial Totals -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 border-t-2 border-slate-800">
+              <div class="lg:col-span-7 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-blue-400">
+                <div class="p-3.5 flex-1">
+                  <label class="font-bold text-xs sm:text-sm text-slate-900 block mb-1">หมายเหตุ (Remarks)</label>
+                  <textarea rows="5" onchange="window.appActions.updateProjectField('remarks', this.value)" class="w-full p-2 rounded-lg border border-slate-200 hover:border-slate-300 focus:border-blue-600 text-xs sm:text-sm text-slate-800 focus:outline-none">${escapeHtml(p.remarks)}</textarea>
+                </div>
+                <!-- Thai Baht text row placed exactly below remarks as requested -->
+                <div class="border-t border-blue-400 bg-slate-50 py-3 px-4 text-center font-bold text-slate-900 text-xs sm:text-sm font-mono-num">
+                  ${toThaiBahtText(summary.grandTotal)}
+                </div>
+              </div>
+
+              <div class="lg:col-span-5 text-xs sm:text-sm divide-y divide-blue-300">
+                <div class="grid grid-cols-12 items-center">
+                  <div class="col-span-7 px-3 py-2 font-bold text-slate-800 border-r border-blue-400">รวมเงิน (Sub-Total)</div>
+                  <div class="col-span-5 px-3 py-2 text-right font-mono-num font-semibold text-slate-900">${formatCurrency(totalSellingBeforeDiscount)}</div>
+                </div>
+
+                <div class="grid grid-cols-12 items-center">
+                  <div class="col-span-7 px-3 py-1.5 font-bold text-slate-800 border-r border-blue-400 flex items-center justify-between">
+                    <span>ส่วนลดการค้า (Discount)</span>
+                    <span class="text-xs text-slate-500 font-normal">บาท</span>
+                  </div>
+                  <div class="col-span-5 px-2 py-1 text-right">
+                    <input type="number" value="${Number(p.discountAmount) || 0}" onchange="window.appActions.updateProjectField('discountAmount', Number(this.value))" class="w-full text-right font-mono-num px-1.5 py-0.5 rounded border border-slate-200 focus:border-blue-600 focus:outline-none text-rose-700 font-semibold" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-12 items-center">
+                  <div class="col-span-7 px-3 py-2 font-bold text-slate-800 border-r border-blue-400">เงินหลังหักส่วนลด</div>
+                  <div class="col-span-5 px-3 py-2 text-right font-mono-num font-semibold text-slate-900">${formatCurrency(summary.subTotalAfterDiscount)}</div>
+                </div>
+
+                <div class="grid grid-cols-12 items-center">
+                  <div class="col-span-7 px-3 py-2 font-bold text-slate-800 border-r border-blue-400 flex items-center justify-between">
+                    <span>ภาษีมูลค่าเพิ่ม (VAT)</span>
+                    <span class="font-mono-num">${Number(p.vatPercent) || 7}%</span>
+                  </div>
+                  <div class="col-span-5 px-3 py-2 text-right font-mono-num text-slate-900">${formatCurrency(summary.vatAmount)}</div>
+                </div>
+
+                <div class="grid grid-cols-12 items-center bg-blue-50/60">
+                  <div class="col-span-7 px-3 py-2.5 font-extrabold text-slate-900 border-r border-blue-400">จำนวนเงินทั้งสิ้น (Grand Total)</div>
+                  <div class="col-span-5 px-3 py-2.5 text-right font-mono-num font-extrabold text-base text-blue-950">${formatCurrency(summary.grandTotal)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signatures -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs sm:text-sm">
+            <div class="border-2 border-slate-700 rounded-xl p-4 text-center flex flex-col justify-between min-h-[145px]">
+              <div class="text-xs font-bold text-slate-500 uppercase">ในนาม ${escapeHtml(p.clientName || 'ลูกค้า')}</div>
+              <div class="my-4 border-b border-blue-500 w-4/5 mx-auto"></div>
+              <div class="space-y-1">
+                <div class="font-bold text-slate-900">ผู้อนุมัติสั่งซื้อ / สั่งจ้าง</div>
+                <div class="text-xs text-slate-600">วันที่ _____/_____/_________</div>
+              </div>
+            </div>
+
+            <div class="border-2 border-slate-700 rounded-xl p-4 text-center flex flex-col justify-between min-h-[145px]">
+              <div class="text-xs font-bold text-blue-700 uppercase">ผู้จัดทำใบเสนอราคา (PREPARED BY)</div>
+              <div class="my-3 border-b border-blue-500 w-4/5 mx-auto"></div>
+              <div class="space-y-1">
+                <input type="text" value="${escapeHtml(p.preparedBy || '')}" placeholder="ระบุชื่อผู้จัดทำ..." onchange="window.appActions.updateProjectField('preparedBy', this.value)" class="w-full text-center font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-blue-600 rounded px-2 py-0.5 focus:outline-none" />
+                <div class="text-xs text-slate-600">ผู้จัดทำใบเสนอราคา</div>
+                <div class="text-xs text-slate-600 flex items-center justify-center gap-1.5 pt-0.5">
+                  <span>วันที่</span>
+                  <input type="date" value="${escapeHtml(p.preparedDate || p.docDate || '2026-10-16')}" onchange="window.appActions.updateProjectField('preparedDate', this.value)" class="font-mono-num text-xs text-slate-800 border-b border-slate-400 hover:border-blue-600 focus:border-blue-600 bg-transparent px-1 py-0.5 focus:outline-none cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-2 border-slate-700 rounded-xl p-4 text-center flex flex-col justify-between min-h-[145px]">
+              <div class="text-xs font-bold text-blue-700 uppercase">ผู้ตรวจสอบใบเสนอราคา (CHECKED BY)</div>
+              <div class="my-3 border-b border-blue-500 w-4/5 mx-auto"></div>
+              <div class="space-y-1">
+                <input type="text" value="${escapeHtml(p.checkedBy || '')}" placeholder="ระบุชื่อผู้ตรวจสอบ..." onchange="window.appActions.updateProjectField('checkedBy', this.value)" class="w-full text-center font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-blue-600 rounded px-2 py-0.5 focus:outline-none" />
+                <div class="text-xs text-slate-600">ผู้ตรวจสอบ / อนุมัติใบเสนอราคา</div>
+                <div class="text-xs text-slate-600 flex items-center justify-center gap-1.5 pt-0.5">
+                  <span>วันที่</span>
+                  <input type="date" value="${escapeHtml(p.checkedDate || p.docDate || '2026-10-16')}" onchange="window.appActions.updateProjectField('checkedDate', this.value)" class="font-mono-num text-xs text-slate-800 border-b border-slate-400 hover:border-blue-600 focus:border-blue-600 bg-transparent px-1 py-0.5 focus:outline-none cursor-pointer" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderExternalBoq = (summary) => {
+      const container = document.getElementById('view_external_boq');
+      if(!container) return;
+      const q = state.boqSearch.trim().toLowerCase();
+      const filtered = (state.project.items || []).filter(item => {
+        const matchCat = state.boqCategoryFilter === 'ALL' || item.costCode === state.boqCategoryFilter;
+        const matchQ = !q || (item.description || '').toLowerCase().includes(q) || (item.costCode || '').toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      const factorMultiplier = 1 + (Number(state.project.overheadPercent || 0) + Number(state.project.profitPercent || 0)) / 100;
+
+      const rows = filtered.map((item, idx) => {
+        const qty = Number(item.qty) || 0;
+        const matU = Number(item.matUnitPrice) || 0;
+        const labU = Number(item.labUnitPrice) || 0;
+        const extMatU = matU * factorMultiplier;
+        const extLabU = labU * factorMultiplier;
+        const extMatTotal = (qty * matU) * factorMultiplier;
+        const extLabTotal = (qty * labU) * factorMultiplier;
+        const extGrandTotal = extMatTotal + extLabTotal;
+
+        const matchedCostCode = state.costCodes.find(c => c.costCode === item.costCode);
+        const costGroupName = matchedCostCode ? matchedCostCode.categoryName : '-';
+
+        return `
+          <tr class="hover:bg-slate-50 border-b border-slate-200 text-xs">
+            <td class="p-2 text-center font-mono-num">${item.itemNo || (idx + 1)}</td>
+            <td class="p-2 text-center font-mono-num font-bold text-slate-700">${escapeHtml(item.costCode || '')}</td>
+            <td class="p-2 text-slate-700 font-semibold">${escapeHtml(costGroupName)}</td>
+            <td class="p-2 text-slate-800">${escapeHtml(item.description || '')}</td>
+            <td class="p-2 text-center font-mono-num">${qty}</td>
+            <td class="p-2 text-center">${escapeHtml(item.unit || '')}</td>
+            <td class="p-2 text-right font-mono-num">${formatCurrency(extMatU)}</td>
+            <td class="p-2 text-right font-mono-num">${formatCurrency(extMatTotal)}</td>
+            <td class="p-2 text-right font-mono-num">${formatCurrency(extLabU)}</td>
+            <td class="p-2 text-right font-mono-num">${formatCurrency(extLabTotal)}</td>
+            <td class="p-2 text-right font-mono-num font-bold text-emerald-700">${formatCurrency(extGrandTotal)}</td>
+            <td class="p-2 text-slate-500">${escapeHtml(item.note || '')}</td>
+            <td class="p-2 text-center">
+              <button onclick="window.appActions.deleteBoqRow('${item.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+               <span class="text-xs font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md">Sheet 2 : External BOQ</span>
+               <h2 class="text-lg font-bold text-slate-900 mt-1">ตารางแสดงปริมาณงานและราคาเสนอขายสำหรับลูกค้า (External Client BOQ)</h2>
+               <p class="text-xs text-slate-500">แสดงราคาต่อหน่วยที่รวมค่าดำเนินการและกำไรแล้ว (แก้ไขต้นทุนและ % กำไรได้ที่หน้า 3. Internal BOQ)</p>
+            </div>
+            <button onclick="window.appActions.switchTab('internal_boq')" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              <span>ไปที่หน้า 3. Internal BOQ (ต้นทุน & กำไร)</span>
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" placeholder="ค้นหารายการ, รหัสต้นทุน..." value="${escapeHtml(state.boqSearch)}" oninput="window.appActions.setBoqSearch(this.value)" class="flex-1 min-w-[200px] px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:border-sky-500 focus:outline-none" />
+            <select onchange="window.appActions.setBoqCategoryFilter(this.value)" class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none">
+              <option value="ALL">ทุกหมวดงาน Cost Code</option>
+              ${state.costCodes.map(c => `<option value="${c.costCode}" ${state.boqCategoryFilter === c.costCode ? 'selected' : ''}>${c.costCode} - ${c.categoryName}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left whitespace-nowrap">
+              <thead class="bg-slate-900 text-white text-xs text-center">
+                <tr>
+                  <th class="p-3 w-16">ลำดับ</th>
+                  <th class="p-3 w-24">Cost Code</th>
+                  <th class="p-3 w-40">Cost Group Name</th>
+                  <th class="p-3 min-w-[250px] text-left">รายการวัสดุและงานก่อสร้าง (Description)</th>
+                  <th class="p-3 w-20">ปริมาณ</th>
+                  <th class="p-3 w-20">หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800">ราคาค่าวัสดุ/หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800/60">รวมค่าวัสดุ</th>
+                  <th class="p-3 w-28 bg-slate-800">ราคาค่าแรง/หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800/60">รวมค่าแรง</th>
+                  <th class="p-3 w-32 bg-sky-900">รวมเป็นเงินเสนอราคา</th>
+                  <th class="p-3 w-32 text-left">หมายเหตุ</th>
+                  <th class="p-3 w-16">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+              <tfoot class="bg-slate-900 text-white font-bold text-xs">
+                <tr>
+                  <td colspan="7" class="p-3 text-right">รวมราคาเสนอขาย (External BOQ Sub-Total):</td>
+                  <td class="p-3 text-right text-sky-400">${formatCurrency((summary.totalMaterial) * factorMultiplier)}</td>
+                  <td class="p-3 text-right text-slate-400">รวมค่าแรง:</td>
+                  <td class="p-3 text-right text-amber-400">${formatCurrency((summary.totalLabor) * factorMultiplier)}</td>
+                  <td class="p-3 text-right text-emerald-400 text-sm">฿${formatCurrency(summary.totalDirect * factorMultiplier)}</td>
+                  <td colspan="2" class="p-3 text-slate-400 font-normal">สุทธิรวม VAT = ฿${formatCurrency(summary.grandTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderInternalBoq = (summary) => {
+      const container = document.getElementById('view_internal_boq');
+      if(!container) return;
+      const q = state.boqSearch.trim().toLowerCase();
+      const filtered = (state.project.items || []).filter(item => {
+        const matchCat = state.boqCategoryFilter === 'ALL' || item.costCode === state.boqCategoryFilter;
+        const matchQ = !q || (item.description || '').toLowerCase().includes(q) || (item.productCode || '').toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      const rows = filtered.map((item, idx) => {
+        const qty = Number(item.qty) || 0;
+        const matU = Number(item.matUnitPrice) || 0;
+        const labU = Number(item.labUnitPrice) || 0;
+        const matTotal = qty * matU;
+        const labTotal = qty * labU;
+
+        const ccOptions = state.costCodes.map(c => 
+          `<option value="${c.costCode}" ${c.costCode === item.costCode ? 'selected' : ''}>${c.costCode} - ${c.categoryName}</option>`
+        ).join('');
+
+        const matchedCostCode = state.costCodes.find(c => c.costCode === item.costCode);
+        const costGroupName = matchedCostCode ? matchedCostCode.categoryName : '-';
+
+        return `
+          <tr class="hover:bg-slate-50 border-b border-slate-200 text-xs">
+            <td class="p-1.5 text-center font-mono-num">${item.itemNo || (idx + 1)}</td>
+            <td class="p-1.5">
+              <select onchange="window.appActions.updateBoqRow('${item.id}', 'costCode', this.value)" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs focus:border-emerald-500">
+                ${ccOptions}
+              </select>
+            </td>
+            <td class="p-2 text-slate-700 font-semibold">${escapeHtml(costGroupName)}</td>
+            <td class="p-1.5">
+              <input type="text" value="${escapeHtml(item.productCode || '')}" placeholder="รหัสวัสดุ..." onchange="window.appActions.updateBoqRow('${item.id}', 'productCode', this.value)" class="w-full px-2 py-1.5 rounded border border-slate-200 font-mono-num text-sky-700 font-semibold focus:border-emerald-500" />
+            </td>
+            <td class="p-1.5">
+              <input type="text" value="${escapeHtml(item.description || '')}" onchange="window.appActions.updateBoqRow('${item.id}', 'description', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-emerald-500 font-medium" />
+            </td>
+            <td class="p-1.5">
+              <input type="number" value="${item.qty}" onchange="window.appActions.updateBoqRow('${item.id}', 'qty', this.value)" class="w-full px-2 py-1.5 rounded border border-slate-200 text-center font-mono-num focus:border-emerald-500" />
+            </td>
+            <td class="p-1.5">
+              <input type="text" value="${escapeHtml(item.unit || '')}" onchange="window.appActions.updateBoqRow('${item.id}', 'unit', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 text-center focus:border-emerald-500" />
+            </td>
+            <td class="p-1.5 bg-slate-50/50">
+              <input type="number" value="${item.matUnitPrice}" onchange="window.appActions.updateBoqRow('${item.id}', 'matUnitPrice', this.value)" class="w-full px-2 py-1.5 rounded border border-slate-200 text-right font-mono-num focus:border-emerald-500" />
+            </td>
+            <td class="p-2 text-right font-mono-num text-slate-600 bg-slate-50/50">${formatCurrency(matTotal)}</td>
+            <td class="p-1.5 bg-slate-50/50">
+              <input type="number" value="${item.labUnitPrice}" onchange="window.appActions.updateBoqRow('${item.id}', 'labUnitPrice', this.value)" class="w-full px-2 py-1.5 rounded border border-slate-200 text-right font-mono-num focus:border-emerald-500" />
+            </td>
+            <td class="p-2 text-right font-mono-num text-slate-600 bg-slate-50/50">${formatCurrency(labTotal)}</td>
+            <td class="p-2 text-right font-mono-num font-bold text-emerald-700 bg-emerald-50/30">${formatCurrency(matTotal + labTotal)}</td>
+            <td class="p-1.5 text-center">
+              <button onclick="window.appActions.deleteBoqRow('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+               <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md">Sheet 3 : Internal BOQ</span>
+               <h2 class="text-lg font-bold text-slate-900 mt-1">ตารางควบคุมต้นทุนทางตรง ค่าดำเนินการ และกำไรภายใน (Internal Cost & Profit Control)</h2>
+               <p class="text-xs text-slate-500">แก้ไขต้นทุนวัสดุ/ค่าแรงต่อหน่วย และปรับตั้งค่า % ค่าดำเนินการและกำไร</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700">ค่าดำเนินการ (Overhead):</label>
+              <input type="number" value="${state.project.overheadPercent}" onchange="window.appActions.updateProjectField('overheadPercent', this.value)" class="w-16 px-2 py-1 rounded border border-slate-300 text-center font-mono-num focus:border-emerald-500" />
+              <span class="text-sm text-slate-600">%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700">กำไร (Profit):</label>
+              <input type="number" value="${state.project.profitPercent}" onchange="window.appActions.updateProjectField('profitPercent', this.value)" class="w-16 px-2 py-1 rounded border border-slate-300 text-center font-mono-num focus:border-emerald-500" />
+              <span class="text-sm text-slate-600">%</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-sm font-bold">
+              รวม Factor: +${Number(state.project.overheadPercent) + Number(state.project.profitPercent)}% (฿${formatCurrency(summary.overheadAmount + summary.profitAmount)})
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" placeholder="ค้นหารายการ, รหัสวัสดุ (Product Code), รหัสต้นทุน..." value="${escapeHtml(state.boqSearch)}" oninput="window.appActions.setBoqSearch(this.value)" class="flex-1 min-w-[200px] px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:border-emerald-500 focus:outline-none" />
+            <select onchange="window.appActions.setBoqCategoryFilter(this.value)" class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none">
+              <option value="ALL">ทุกหมวดงาน Cost Code</option>
+              ${state.costCodes.map(c => `<option value="${c.costCode}" ${state.boqCategoryFilter === c.costCode ? 'selected' : ''}>${c.costCode} - ${c.categoryName}</option>`).join('')}
+            </select>
+            <button onclick="window.appActions.openModal('productPickerModal')" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
+              <i data-lucide="package" class="w-4 h-4"></i>
+              <span>ดึงรายการจากฐานข้อมูล Product Code</span>
+            </button>
+            <button onclick="window.appActions.addBoqRow()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>เพิ่มแถวรายการใหม่</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left whitespace-nowrap">
+              <thead class="bg-slate-900 text-white text-xs text-center">
+                <tr>
+                  <th class="p-3 w-12">ลำดับ</th>
+                  <th class="p-3 w-36">Cost Code</th>
+                  <th class="p-3 w-36">Cost Group Name</th>
+                  <th class="p-3 w-36">Product Code</th>
+                  <th class="p-3 min-w-[250px] text-left">รายการวัสดุและงานก่อสร้าง (Description)</th>
+                  <th class="p-3 w-20">ปริมาณ</th>
+                  <th class="p-3 w-16">หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800">ทุนวัสดุ/หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800/60">รวมทุนวัสดุ</th>
+                  <th class="p-3 w-28 bg-slate-800">ทุนค่าแรง/หน่วย</th>
+                  <th class="p-3 w-28 bg-slate-800/60">รวมทุนแรง</th>
+                  <th class="p-3 w-32 bg-emerald-900">รวมต้นทุนทางตรง</th>
+                  <th class="p-3 w-12">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+              <tfoot class="bg-slate-900 text-white font-bold text-xs">
+                <tr>
+                  <td colspan="8" class="p-3 text-right">รวมต้นทุนภายใน (Internal Direct Cost):</td>
+                  <td class="p-3 text-right text-emerald-400">${formatCurrency(summary.totalMaterial)}</td>
+                  <td class="p-3 text-right text-slate-400">รวมทุนแรง:</td>
+                  <td class="p-3 text-right text-amber-400">${formatCurrency(summary.totalLabor)}</td>
+                  <td class="p-3 text-right text-emerald-400 text-sm">฿${formatCurrency(summary.totalDirect)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderCostCodeDB = () => {
+      const container = document.getElementById('view_cost_code_db');
+      if(!container) return;
+      const q = state.costCodeSearch.trim().toLowerCase();
+      const filtered = state.costCodes.filter(c => !q || c.costCode.toLowerCase().includes(q) || c.categoryName.toLowerCase().includes(q) || (c.subCostCode || '').toLowerCase().includes(q) || (c.subCostCodeName || '').toLowerCase().includes(q));
+
+      const canDeleteMaster = ['Admin', 'PM'].includes(state.currentUserProfile?.role);
+
+      const rows = filtered
+        .map(
+          (cc) => `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="p-2"><input type="text" value="${escapeHtml(cc.costCode)}" onchange="window.appActions.updateCostCode('${cc.id}', 'costCode', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-purple-500 font-mono-num font-bold text-purple-700 text-center" /></td>
+            <td class="p-2"><input type="text" value="${escapeHtml(cc.categoryName)}" onchange="window.appActions.updateCostCode('${cc.id}', 'categoryName', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-purple-500 font-medium text-slate-800" /></td>
+            <td class="p-2"><input type="text" value="${escapeHtml(cc.subCostCode || '')}" onchange="window.appActions.updateCostCode('${cc.id}', 'subCostCode', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-purple-500 font-mono-num font-semibold text-sky-700 text-center" /></td>
+            <td class="p-2"><input type="text" value="${escapeHtml(cc.subCostCodeName || '')}" onchange="window.appActions.updateCostCode('${cc.id}', 'subCostCodeName', this.value)" class="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-purple-500 font-medium text-slate-700" /></td>
+            <td class="p-2 text-center">
+              ${canDeleteMaster ? `<button onclick="window.appActions.deleteCostCode('${cc.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : `<span class="text-xs text-slate-300">Lock</span>`}
+            </td>
+          </tr>
+        `
+        )
+        .join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md">Sheet 4 : Cost Code Database</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">ฐานข้อมูลรหัสหมวดงานหลักและหมวดงานย่อย (Cost Group & Sub Group)</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" placeholder="ค้นหารหัส หรือชื่อหมวดงาน..." value="${escapeHtml(state.costCodeSearch)}" oninput="window.appActions.setCostCodeSearch(this.value)" class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-purple-500 focus:outline-none min-w-[200px]" />
+            <button onclick="window.appActions.openAddCostCodeModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>เพิ่มรหัส Cost Code</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto mt-4">
+          <table class="w-full text-sm text-left whitespace-nowrap">
+            <thead class="bg-slate-900 text-white text-xs uppercase">
+              <tr>
+                <th class="py-3 px-4 w-32 text-center">Cost Code</th>
+                <th class="py-3 px-4 min-w-[200px]">Cost Code Name</th>
+                <th class="py-3 px-4 w-36 text-center">Sub Cost Code</th>
+                <th class="py-3 px-4 min-w-[200px]">Sub Cost Code Name</th>
+                <th class="py-3 px-3 w-20 text-center">ลบ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">${rows}</tbody>
+          </table>
+        </div>
+      `;
+    };
+
+    const renderVendorListDB = () => {
+      const container = document.getElementById('view_vendor_list_db');
+      if(!container) return;
+      const q = state.vendorSearch.trim().toLowerCase();
+      const filtered = state.vendors.filter(v => !q || v.vendorNo.toLowerCase().includes(q) || v.vendorName.toLowerCase().includes(q) || (v.contactName1 || '').toLowerCase().includes(q) || (v.contactName2 || '').toLowerCase().includes(q));
+
+      const role = state.currentUserProfile?.role;
+      const canDeleteMaster = ['Admin', 'PM'].includes(role);
+      const canEdit = role !== 'Viewer';
+
+      const rows = filtered.map(v => {
+        const card1Html = v.cardImage1 
+          ? `<button onclick="window.appActions.viewCardImage('${v.id}', 1)" class="p-1.5 text-sky-600 hover:bg-sky-100 rounded transition" title="ดูนามบัตร"><i data-lucide="eye" class="w-4 h-4"></i></button>`
+          : `<span class="text-slate-300">-</span>`;
+        const card2Html = v.cardImage2 
+          ? `<button onclick="window.appActions.viewCardImage('${v.id}', 2)" class="p-1.5 text-sky-600 hover:bg-sky-100 rounded transition" title="ดูนามบัตร"><i data-lucide="eye" class="w-4 h-4"></i></button>`
+          : `<span class="text-slate-300">-</span>`;
+          
+        const editBtn = canEdit ? `<button onclick="window.appActions.openEditVendorModal('${v.id}')" class="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded cursor-pointer transition" title="แก้ไขข้อมูล"><i data-lucide="edit" class="w-4 h-4"></i></button>` : '';
+        const delBtn = canDeleteMaster ? `<button onclick="window.appActions.confirmDeleteVendor('${v.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition" title="ลบข้อมูล"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
+
+        return `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="p-3 text-xs text-slate-600">${escapeHtml(v.costCodeName || '')}</td>
+            <td class="p-3 text-xs text-slate-600">${escapeHtml(v.subCostCodeName || '')}</td>
+            <td class="p-3 font-mono-num font-bold text-amber-700 text-center text-xs">${escapeHtml(v.vendorNo)}</td>
+            <td class="p-3 font-bold text-slate-800 text-xs">${escapeHtml(v.vendorName)}</td>
+            <td class="p-3 text-xs">${escapeHtml(v.contactName1 || '-')}</td>
+            <td class="p-3 font-mono-num text-xs">${escapeHtml(v.phone1 || '-')}</td>
+            <td class="p-3 text-xs">${escapeHtml(v.email1 || '-')}</td>
+            <td class="p-3 text-center">${card1Html}</td>
+            <td class="p-3 text-xs">${escapeHtml(v.contactName2 || '-')}</td>
+            <td class="p-3 font-mono-num text-xs">${escapeHtml(v.phone2 || '-')}</td>
+            <td class="p-3 text-xs">${escapeHtml(v.email2 || '-')}</td>
+            <td class="p-3 text-center">${card2Html}</td>
+            <td class="p-3 text-center">
+              <div class="flex items-center justify-center gap-2">
+                ${editBtn}
+                ${delBtn}
+                ${(!canEdit && !canDeleteMaster) ? '<span class="text-xs text-slate-300">Lock</span>' : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md">Sheet 5 : Vendor List Database</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">ฐานข้อมูลผู้ขาย / ผู้ให้บริการ (Vendor / Supplier List)</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" placeholder="ค้นหารหัส หรือชื่อผู้ขาย..." value="${escapeHtml(state.vendorSearch)}" oninput="window.appActions.setVendorSearch(this.value)" class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-amber-500 focus:outline-none min-w-[200px]" />
+            <button onclick="window.appActions.openAddVendorModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>เพิ่มผู้ขาย (Add Vendor)</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto mt-4">
+          <table class="w-full text-sm text-left whitespace-nowrap">
+            <thead class="bg-slate-900 text-white text-xs uppercase">
+              <tr>
+                <th class="py-3 px-4 w-36">COST CODE NAME</th>
+                <th class="py-3 px-4 w-36">SUB COST NAME</th>
+                <th class="py-3 px-4 w-28 text-center">VENDOR ID</th>
+                <th class="py-3 px-4 min-w-[160px]">ชื่อผู้ขาย (VENDOR NAME)</th>
+                <th class="py-3 px-4 w-32">ผู้ติดต่อคนที่ 1</th>
+                <th class="py-3 px-4 w-32">เบอร์โทร 1</th>
+                <th class="py-3 px-4 w-32">อีเมล 1</th>
+                <th class="py-3 px-3 w-16 text-center">นามบัตร 1</th>
+                <th class="py-3 px-4 w-32">ผู้ติดต่อคนที่ 2</th>
+                <th class="py-3 px-4 w-32">เบอร์โทร 2</th>
+                <th class="py-3 px-4 w-32">อีเมล 2</th>
+                <th class="py-3 px-3 w-16 text-center">นามบัตร 2</th>
+                <th class="py-3 px-3 w-20 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">${rows}</tbody>
+          </table>
+        </div>
+      `;
+    };
+
+    const renderProductCode = () => {
+      const container = document.getElementById('view_product_code');
+      if(!container) return;
+      const q = state.productSearch?.trim().toLowerCase() || '';
+
+      const products = state.productCodes.map(p => ({
+        ...p,
+        vendorName: p.vendorName || p.brand || '-'
+      }));
+
+      const filtered = products.filter(p => 
+        !q || 
+        (p.productCode && p.productCode.toLowerCase().includes(q)) || 
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.vendorName && p.vendorName.toLowerCase().includes(q)) ||
+        (p.spec && p.spec.toLowerCase().includes(q)) ||
+        (p.subCostCodeName && p.subCostCodeName.toLowerCase().includes(q))
+      );
+
+      const role = state.currentUserProfile?.role;
+      const canDeleteMaster = ['Admin', 'PM'].includes(role);
+      const canEdit = role !== 'Viewer';
+
+      const rows = filtered.map(p => {
+          const editBtn = canEdit ? `<button onclick="window.appActions.openAddProductModal('${p.id}')" class="px-2.5 py-1 rounded border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer transition font-medium flex items-center gap-1" title="แก้ไขและจัดการประวัติราคา"><i data-lucide="edit" class="w-3.5 h-3.5"></i> แก้ไข</button>` : '';
+          const importBtn = canEdit ? `<button onclick="window.appActions.addBoqRowFromProduct('${p.id}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer transition shadow-sm" title="ส่งข้อมูลเข้าตาราง BOQ"><i data-lucide="plus" class="w-3.5 h-3.5"></i> นำเข้า BOQ</button>` : '';
+          
+          return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs">
+              <td class="p-3 font-mono-num font-bold text-sky-700">${escapeHtml(p.productCode)}</td>
+              <td class="p-3 font-bold text-slate-800 min-w-[250px] whitespace-normal">${escapeHtml(p.name)}</td>
+              <td class="p-3 text-slate-600">${escapeHtml(p.subCostCodeName || '-')}</td>
+              <td class="p-3 font-semibold text-slate-700">${escapeHtml(p.vendorName)}</td>
+              <td class="p-3 text-slate-600">${escapeHtml(p.spec || '-')}</td>
+              <td class="p-3 text-center">${escapeHtml(p.unit || 'Ea')}</td>
+              <td class="p-3 text-right font-mono-num">${formatCurrency(p.matUnitPrice)}</td>
+              <td class="p-3 text-right font-mono-num">${formatCurrency(p.labUnitPrice)}</td>
+              <td class="p-3 text-center">
+                <button onclick="window.appActions.openAddProductModal('${p.id}')" class="px-2.5 py-1 inline-flex items-center text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded transition font-medium" title="ดูประวัติการอัปเดตราคา">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 mr-1.5"></i> ${escapeHtml(p.updatedAt || '-')}
+                </button>
+              </td>
+              <td class="p-3 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                  ${importBtn}
+                  ${editBtn}
+                  ${(!canEdit && !canDeleteMaster) ? '<span class="text-xs text-slate-300">Lock</span>' : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md">Product Code Database</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">ฐานข้อมูลรหัสสินค้า วัสดุ และราคากลาง (Product Code Catalog)</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" placeholder="ค้นหารหัสสินค้า, ชื่อ, ยี่ห้อ, สเปค..." value="${escapeHtml(state.productSearch || '')}" oninput="window.appActions.setProductSearch(this.value)" class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-sky-500 focus:outline-none min-w-[240px]" />
+            <button onclick="window.appActions.openAddProductModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>เพิ่มรหัสสินค้า (Add Product Code)</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto mt-4">
+          <table class="w-full text-sm text-left whitespace-nowrap">
+            <thead class="bg-slate-900 text-white text-xs uppercase">
+              <tr>
+                <th class="py-3 px-4 w-40">Product Code</th>
+                <th class="py-3 px-4 min-w-[250px]">Product Name</th>
+                <th class="py-3 px-4 w-36">Sub Cost Code Name</th>
+                <th class="py-3 px-4 w-36">Vendor Name</th>
+                <th class="py-3 px-4 w-40">Spec Detail</th>
+                <th class="py-3 px-3 w-16 text-center">หน่วย</th>
+                <th class="py-3 px-4 w-28 text-right">ค่าวัสดุ/หน่วย</th>
+                <th class="py-3 px-4 w-28 text-right">ค่าแรง/หน่วย</th>
+                <th class="py-3 px-3 w-32 text-center">History price</th>
+                <th class="py-3 px-4 w-36 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">${rows}</tbody>
+          </table>
+        </div>
+      `;
+    };
+
+    const renderSavedProjects = () => {
+      const container = document.getElementById('view_saved_projects');
+      if(!container) return;
+      const cards = state.savedProjects
+        .map((proj) => {
+          const isCurrent = proj.id === state.project.id;
+          return `
+            <div class="rounded-2xl p-5 border transition bg-white shadow-sm ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-200'}">
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono-num text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">${escapeHtml(proj.projectCode)}</span>
+                    <span class="text-xs text-slate-500">${escapeHtml(proj.revision)}</span>
+                    ${isCurrent ? '<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">กำลังเปิดใช้งาน</span>' : ''}
+                  </div>
+                  <h3 class="font-bold text-base text-slate-900 mt-1">${escapeHtml(proj.projectName)}</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">ลูกค้า: ${escapeHtml(proj.clientName)} | สถานที่: ${escapeHtml(proj.location)}</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3 mt-3">
+                <span>จำนวน ${proj.items?.length || 0} รายการใน BOQ</span>
+                <span>อัปเดต: ${proj.updatedAt ? new Date(proj.updatedAt).toLocaleString('th-TH') : '-'}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-4">
+                <button onclick="window.appActions.loadSavedProject('${proj.id}')" class="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                  <i data-lucide="folder-open" class="w-4 h-4 text-emerald-400"></i>
+                  <span>เปิดดู / แก้ไขข้อมูล BOQ</span>
+                </button>
+                <button onclick="window.appActions.cloneSavedProject('${proj.id}')" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span>คัดลอก Revision</span>
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md">Project Database</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">ฐานข้อมูลแฟ้มโครงการ BOQ ที่บันทึกไว้ (เปิดดู แก้ไข หรือสร้างสำเนา Revision)</h2>
+          </div>
+          <button onclick="window.appActions.createNewProject()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>สร้างโครงการ BOQ ใหม่</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${cards}</div>
+      `;
+    };
+
+    const renderUserManagement = () => {
+      const container = document.getElementById('view_user_management');
+      if(!container) return;
+      
+      const role = state.currentUserProfile?.role;
+      const isAdmin = role === 'Admin';
+      
+      const cards = state.appUsers.map(u => {
+        const isApproved = u.status === 'Approved';
+        const isSelf = u.email === state.currentUserProfile?.email || u.uid === state.currentUserProfile?.uid;
+        
+        const statusBadge = isApproved 
+          ? `<span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 tracking-wider">APPROVED</span>`
+          : `<span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20 tracking-wider">PENDING</span>`;
+        
+        const roleHtml = (isAdmin && isApproved && !isSelf) ? `
+          <select onchange="window.appActions.updateUserRole('${u.uid}', this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2 min-w-[120px] cursor-pointer outline-none">
+            <option value="Admin" ${u.role === 'Admin' ? 'selected' : ''}>Admin</option>
+            <option value="PM" ${u.role === 'PM' ? 'selected' : ''}>PM</option>
+            <option value="User" ${u.role === 'User' ? 'selected' : ''}>User</option>
+            <option value="Viewer" ${u.role === 'Viewer' ? 'selected' : ''}>Viewer</option>
+          </select>
+        ` : `<div class="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold rounded-lg block p-2 min-w-[120px] text-center">${u.role}</div>`;
+        
+        const actionHtml = (isAdmin && !isSelf) ? `
+          ${!isApproved ? `<button onclick="window.appActions.approveUser('${u.uid}')" class="px-4 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition cursor-pointer">Approve</button>` : ''}
+          <button onclick="window.appActions.deleteAppUser('${u.uid}')" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+          </button>
+        ` : '';
+
+        const bottomBarHtml = `<div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-700/50">
+                                <div>${roleHtml}</div>
+                                <div class="flex gap-2">${actionHtml}</div>
+                               </div>`;
+
+        return `
+          <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg flex flex-col h-full">
+            <div class="flex justify-between items-start mb-6">
+              <div>
+                <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+                  ${escapeHtml(u.name)}
+                  ${isSelf ? `<span class="px-1.5 py-0.5 rounded bg-slate-600 text-[10px] text-slate-200 tracking-wider">คุณ</span>` : ''}
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">${escapeHtml(u.email)}</p>
+              </div>
+              <div class="text-right">
+                ${statusBadge}
+                <div class="text-[10px] text-slate-500 mt-2">Role: <span class="font-bold text-slate-300">${u.role}</span></div>
+              </div>
+            </div>
+            <div class="flex-1"></div>
+            ${bottomBarHtml}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4 text-white mb-2">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700">
+              <i data-lucide="users" class="w-5 h-5 text-sky-400"></i>
+            </div>
+            <div>
+              <h2 class="text-lg font-bold tracking-wide uppercase">User Management (${state.appUsers.length})</h2>
+              <p class="text-xs text-slate-400">ระบบจัดการสิทธิ์ผู้ใช้งานและอนุมัติการเข้าถึง (Access Control)</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${cards}
+        </div>
+      `;
+      if(window.lucide) window.lucide.createIcons();
+    };
+
+    const renderAll = () => {
+      const summary = computeBoqSummary();
+      renderHeaderAndKpis(summary);
+      if (state.activeTab === 'cover_sheet') renderCoverSheet(summary);
+      else if (state.activeTab === 'external_boq') renderExternalBoq(summary);
+      else if (state.activeTab === 'internal_boq') renderInternalBoq(summary);
+      else if (state.activeTab === 'cost_code_db') renderCostCodeDB();
+      else if (state.activeTab === 'vendor_list_db') renderVendorListDB();
+      else if (state.activeTab === 'product_code') renderProductCode();
+      else if (state.activeTab === 'saved_projects') renderSavedProjects();
+      else if (state.activeTab === 'user_management') renderUserManagement();
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.appActions = {
+      // API Calls to Google Sheets
+      async syncToGoogleSheet(action, uid, role = null) {
+        if (!GOOGLE_SHEET_API_URL) return;
+        try {
+           const payload = { action, uid, timestamp: new Date().toLocaleString('th-TH') };
+           if(role) payload.role = role;
+           await fetch(GOOGLE_SHEET_API_URL, {
+              method: 'POST', mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+           });
+        } catch(e) { console.error('Sheet Sync Error:', e); }
+      },
+      approveUser(uid) {
+        state.appUsers = state.appUsers.map(u => u.uid === uid ? { ...u, status: 'Approved', role: 'Viewer' } : u);
+        renderAll();
+        showAuthToast('อนุมัติผู้ใช้งานเรียบร้อยแล้ว');
+        this.syncToGoogleSheet('approve', uid);
+      },
+      updateUserRole(uid, newRole) {
+        state.appUsers = state.appUsers.map(u => u.uid === uid ? { ...u, role: newRole } : u);
+        renderAll();
+        showAuthToast(`เปลี่ยนสิทธิ์เป็น ${newRole} สำเร็จ`);
+        this.syncToGoogleSheet('updateRole', uid, newRole);
+      },
+      deleteAppUser(uid) {
+        if(!confirm('ยืนยันการลบผู้ใช้งานออกจากระบบอย่างถาวร?')) return;
+        state.appUsers = state.appUsers.filter(u => u.uid !== uid);
+        renderAll();
+        showAuthToast('ลบผู้ใช้งานสำเร็จ');
+        this.syncToGoogleSheet('delete', uid);
+      },
+
+      switchTab(tabId) {
+        state.activeTab = tabId;
+        renderAll();
+      },
+      openModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+        if (id === 'productPickerModal') this.renderProductPickerList();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      closeModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      },
+      renderProductPickerList() {
+        const q = (document.getElementById('modalProductSearch')?.value || '').trim().toLowerCase();
+        const box = document.getElementById('modalProductList');
+        if (!box) return;
+        box.innerHTML = state.productCodes
+          .filter((p) => !q || p.productCode.toLowerCase().includes(q) || p.name.toLowerCase().includes(q))
+          .map(
+            (prod) => `
+            <div class="py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50 px-2 rounded-lg">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono-num text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded">${escapeHtml(prod.productCode)}</span>
+                  <span class="font-mono-num text-xs text-slate-500">Cost Code: ${escapeHtml(prod.costCode)}</span>
+                </div>
+                <div class="font-semibold text-sm text-slate-900 mt-0.5">${escapeHtml(prod.name)}</div>
+                <div class="text-xs text-slate-500">ค่าวัสดุ: ฿${formatCurrency(prod.matUnitPrice)}/${escapeHtml(prod.unit)} | ค่าแรง: ฿${formatCurrency(prod.labUnitPrice)}/${escapeHtml(prod.unit)}</div>
+              </div>
+              <button onclick="window.appActions.addBoqRowFromProduct('${prod.id}')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer">
+                + เพิ่มลง BOQ
+              </button>
+            </div>
+          `
+          )
+          .join('');
+      },
+      updateProjectField(field, value) {
+        state.project[field] = value;
+        state.project.updatedAt = new Date().toISOString();
+        renderAll();
+      },
+      handleLogoUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result;
+          if (typeof dataUrl === 'string') {
+            state.project.companyLogo = dataUrl;
+            state.project.updatedAt = new Date().toISOString();
+            renderAll();
+            showToast('อัปโหลดรูปโลโก้บริษัทเรียบร้อยแล้ว');
+          }
+        };
+        reader.readAsDataURL(file);
+      },
+      removeCompanyLogo() {
+        state.project.companyLogo = '';
+        state.project.updatedAt = new Date().toISOString();
+        renderAll();
+        showToast('ลบรูปโลโก้บริษัทแล้ว');
+      },
+      setBoqSearch(val) {
+        state.boqSearch = val;
+        const summary = computeBoqSummary();
+        if (state.activeTab === 'internal_boq') renderInternalBoq(summary);
+        else renderExternalBoq(summary);
+        if (window.lucide) window.lucide.createIcons();
+      },
+      setBoqCategoryFilter(val) {
+        state.boqCategoryFilter = val;
+        renderAll();
+      },
+      setCostCodeSearch(val) {
+        state.costCodeSearch = val;
+        renderAll();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      setVendorSearch(val) {
+        state.vendorSearch = val;
+        renderAll();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      setProductSearch(val) {
+        state.productSearch = val;
+        renderAll();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      deleteProductCode(id) {
+        if(!confirm("ยืนยันลบรายการสินค้านี้?")) return;
+        state.productCodes = state.productCodes.filter((p) => p.id !== id);
+        renderAll();
+        showToast('ลบรายการสินค้าเรียบร้อยแล้ว');
+      },
+      addBoqRow() {
+        const nextIdx = (state.project.items?.length || 0) + 1;
+        state.project.items.push({
+          id: 'item-' + Date.now(),
+          itemNo: `${nextIdx}`,
+          costCode: state.costCodes[0]?.costCode || '010',
+          productCode: '',
+          description: 'รายการงานก่อสร้างใหม่...',
+          unit: 'ตร.ม.',
+          qty: 1,
+          matUnitPrice: 0,
+          labUnitPrice: 0,
+          note: ''
+        });
+        renderAll();
+        showToast('เพิ่มแถวรายการใหม่ใน External BOQ แล้ว');
+      },
+      addBoqRowFromProduct(prodId) {
+        const prod = state.productCodes.find((p) => p.id === prodId);
+        if (!prod) return;
+        const nextIdx = (state.project.items?.length || 0) + 1;
+        state.project.items.push({
+          id: 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+          itemNo: `${nextIdx}`,
+          costCode: prod.costCode || '010',
+          productCode: prod.productCode,
+          description: prod.name,
+          unit: prod.unit || 'งาน',
+          qty: 1,
+          matUnitPrice: Number(prod.matUnitPrice) || 0,
+          labUnitPrice: Number(prod.labUnitPrice) || 0,
+          note: prod.spec || ''
+        });
+        renderAll();
+        showToast(`เพิ่ม "${prod.name}" เข้าสู่ตาราง BOQ แล้ว`);
+      },
+      updateBoqRow(rowId, field, value) {
+        state.project.items = state.project.items.map((it) => {
+          if (it.id !== rowId) return it;
+          const updated = { ...it, [field]: value };
+          if (field === 'productCode') {
+            const matched = state.productCodes.find((p) => p.productCode === value);
+            if (matched) {
+              updated.costCode = matched.costCode || updated.costCode;
+              updated.description = matched.name;
+              updated.unit = matched.unit;
+              updated.matUnitPrice = matched.matUnitPrice;
+              updated.labUnitPrice = matched.labUnitPrice;
+              updated.note = matched.spec || updated.note;
+            }
+          }
+          return updated;
+        });
+        renderAll();
+      },
+      duplicateBoqRow(rowId) {
+        const orig = state.project.items.find((it) => it.id === rowId);
+        if (!orig) return;
+        state.project.items.push({
+          ...orig,
+          id: 'item-' + Date.now(),
+          itemNo: orig.itemNo + ' (สำเนา)'
+        });
+        renderAll();
+      },
+      deleteBoqRow(rowId) {
+        state.project.items = state.project.items.filter((it) => it.id !== rowId);
+        renderAll();
+      },
+      
+      openAddCostCodeModal() {
+        let modal = document.getElementById('addCostCodeModal');
+        if (!modal) {
+          const modalHtml = `
+            <div id="addCostCodeModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+              <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full flex flex-col overflow-hidden">
+                <div class="p-4 bg-purple-900 text-white flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-purple-400"></i>
+                    <h3 class="font-bold text-base">เพิ่มรหัส Cost Code ย่อย</h3>
+                  </div>
+                  <button onclick="window.appActions.closeModal('addCostCodeModal')" class="p-1 rounded-lg hover:bg-purple-800 text-slate-400 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <div class="p-5 space-y-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">หมวดงานหลัก (Cost Code Name)</label>
+                    <select id="newCC_costCodeSelect" onchange="window.appActions.handleCostCodeGroupChange()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-purple-500 focus:outline-none bg-white cursor-pointer">
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">Cost Code</label>
+                      <input type="text" id="newCC_costCode" readonly class="w-full px-3 py-2 border border-slate-200 bg-slate-100 rounded-lg text-sm font-mono-num font-bold text-purple-700 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">Sub Cost Code (Auto)</label>
+                      <input type="text" id="newCC_subCostCode" readonly class="w-full px-3 py-2 border border-slate-200 bg-slate-100 rounded-lg text-sm font-mono-num font-bold text-sky-700 focus:outline-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อหมวดงานย่อย (Sub Cost Code Name) <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newCC_subCostCodeName" placeholder="ระบุชื่อหมวดงานย่อย..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-purple-500 focus:outline-none" />
+                  </div>
+                </div>
+                <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                  <button onclick="window.appActions.closeModal('addCostCodeModal')" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-300 transition cursor-pointer">ยกเลิก</button>
+                  <button onclick="window.appActions.saveNewCostCode()" class="px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold text-xs sm:text-sm hover:bg-purple-500 transition cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>บันทึกข้อมูล</span>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+          document.body.insertAdjacentHTML('beforeend', modalHtml);
+          modal = document.getElementById('addCostCodeModal');
+        }
+
+        const select = document.getElementById('newCC_costCodeSelect');
+        const uniqueGroups = [];
+        const seen = new Set();
+        state.costCodes.forEach(c => {
+          if (!seen.has(c.costCode)) {
+            seen.add(c.costCode);
+            uniqueGroups.push({ code: c.costCode, name: c.categoryName });
+          }
+        });
+
+        select.innerHTML = uniqueGroups.map(g => `<option value="${g.code}">${g.code} - ${g.name}</option>`).join('');
+        document.getElementById('newCC_subCostCodeName').value = '';
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        this.handleCostCodeGroupChange();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      handleCostCodeGroupChange() {
+        const select = document.getElementById('newCC_costCodeSelect');
+        const selectedCostCode = select.value;
+        
+        const itemsInGroup = state.costCodes.filter(c => c.costCode === selectedCostCode);
+        let nextSub = selectedCostCode;
+        if (itemsInGroup.length > 0) {
+          const maxSub = Math.max(...itemsInGroup.map(c => parseInt(c.subCostCode || 0, 10)));
+          nextSub = String(maxSub + 1).padStart(3, '0');
+        } else {
+          nextSub = String(parseInt(selectedCostCode, 10) + 1).padStart(3, '0');
+        }
+
+        document.getElementById('newCC_costCode').value = selectedCostCode;
+        document.getElementById('newCC_subCostCode').value = nextSub;
+      },
+      saveNewCostCode() {
+        const select = document.getElementById('newCC_costCodeSelect');
+        const costCode = document.getElementById('newCC_costCode').value;
+        const subCostCode = document.getElementById('newCC_subCostCode').value;
+        const subCostCodeName = document.getElementById('newCC_subCostCodeName').value.trim();
+        const categoryName = select.options[select.selectedIndex].text.split(' - ')[1];
+
+        if (!subCostCodeName) {
+          showToast('กรุณาระบุชื่อหมวดงานย่อย', true);
+          return;
+        }
+
+        const newCode = {
+          id: 'cc-' + Date.now(),
+          costCode: costCode,
+          categoryName: categoryName,
+          subCostCode: subCostCode,
+          subCostCodeName: subCostCodeName
+        };
+
+        const lastIndex = state.costCodes.map(c => c.costCode).lastIndexOf(costCode);
+        if (lastIndex !== -1) {
+          state.costCodes.splice(lastIndex + 1, 0, newCode);
+        } else {
+          state.costCodes.push(newCode);
+        }
+
+        this.closeModal('addCostCodeModal');
+        renderAll();
+        showToast(`เพิ่มหมวดงานย่อย ${subCostCode} สำเร็จ!`);
+      },
+      updateCostCode(id, field, value) {
+        state.costCodes = state.costCodes.map((c) => (c.id === id ? { ...c, [field]: value } : c));
+        renderAll();
+      },
+      deleteCostCode(id) {
+        if(!confirm("ยืนยันลบ Cost Code?")) return;
+        state.costCodes = state.costCodes.filter((c) => c.id !== id);
+        renderAll();
+      },
+      
+      injectVendorModal() {
+        let modal = document.getElementById('addVendorModal');
+        if (!modal) {
+          const modalHtml = `
+            <div id="addVendorModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+              <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full flex flex-col overflow-hidden">
+                <div class="p-4 bg-amber-600 text-white flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-5 h-5"></i>
+                    <h3 id="vendorModalTitle" class="font-bold text-base">เพิ่มรายชื่อผู้ขาย / ผู้ให้บริการ (Add Vendor)</h3>
+                  </div>
+                  <button onclick="window.appActions.closeModal('addVendorModal')" class="p-1 rounded-lg hover:bg-amber-700 text-amber-100 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <div class="p-5 overflow-y-auto max-h-[75vh]">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">หมวดงานหลัก (Cost Code Name) <span class="text-rose-500">*</span></label>
+                      <select id="newVen_costCode" onchange="window.appActions.handleVendorCostCodeChange()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-amber-500 focus:outline-none cursor-pointer"></select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">หมวดงานย่อย (Sub Cost Code Name) <span class="text-rose-500">*</span></label>
+                      <select id="newVen_subCostCode" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-amber-500 focus:outline-none cursor-pointer"></select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผู้ขาย (Vendor ID) - อัตโนมัติ</label>
+                      <input type="text" id="newVen_vendorNo" readonly class="w-full px-3 py-2 border border-slate-200 bg-slate-100 rounded-lg text-sm font-mono-num font-bold text-amber-700 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อบริษัทผู้ขาย (Vendor Name) <span class="text-rose-500">*</span></label>
+                      <input type="text" id="newVen_vendorName" list="existingVendorsList" oninput="window.appActions.handleVendorNameInput(this.value)" placeholder="ระบุชื่อบริษัท หรือค้นหาจากฐานข้อมูล..." autocomplete="off" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-amber-500 focus:outline-none font-bold" />
+                      <datalist id="existingVendorsList"></datalist>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                      <div class="font-bold text-sm text-sky-800 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                        <i data-lucide="user" class="w-4 h-4"></i> ข้อมูลผู้ติดต่อคนที่ 1
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">ชื่อผู้ติดต่อ (Contact)</label>
+                        <input type="text" id="newVen_c1_name" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-xs text-slate-600 mb-1">เบอร์โทรศัพท์</label>
+                          <input type="text" id="newVen_c1_phone" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm font-mono-num focus:border-amber-500" />
+                        </div>
+                        <div>
+                          <label class="block text-xs text-slate-600 mb-1">อีเมล (Email)</label>
+                          <input type="text" id="newVen_c1_email" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">รายละเอียดเพิ่มเติม (Note)</label>
+                        <input type="text" id="newVen_c1_note" placeholder="เช่น ตำแหน่ง, เวลาติดต่อ..." class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">แนบรูปนามบัตร (Business Card)</label>
+                        <input type="file" accept="image/*" onchange="window.appActions.handleCardUpload(event, 1)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer" />
+                        <input type="hidden" id="newVen_c1_card_data" />
+                        <div class="mt-2 relative inline-block">
+                          <img id="newVen_c1_card_preview" src="" class="hidden h-20 object-contain border border-slate-300 rounded-lg bg-white" />
+                          <button id="newVen_c1_card_remove" onclick="window.appActions.removeCardImage(1)" class="hidden absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow hover:bg-rose-600"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                      <div class="font-bold text-sm text-slate-700 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                        <i data-lucide="user" class="w-4 h-4"></i> ข้อมูลผู้ติดต่อคนที่ 2
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">ชื่อผู้ติดต่อ (Contact)</label>
+                        <input type="text" id="newVen_c2_name" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-xs text-slate-600 mb-1">เบอร์โทรศัพท์</label>
+                          <input type="text" id="newVen_c2_phone" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm font-mono-num focus:border-amber-500" />
+                        </div>
+                        <div>
+                          <label class="block text-xs text-slate-600 mb-1">อีเมล (Email)</label>
+                          <input type="text" id="newVen_c2_email" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">รายละเอียดเพิ่มเติม (Note)</label>
+                        <input type="text" id="newVen_c2_note" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label class="block text-xs text-slate-600 mb-1">แนบรูปนามบัตร (Business Card)</label>
+                        <input type="file" accept="image/*" onchange="window.appActions.handleCardUpload(event, 2)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer" />
+                        <input type="hidden" id="newVen_c2_card_data" />
+                        <div class="mt-2 relative inline-block">
+                          <img id="newVen_c2_card_preview" src="" class="hidden h-20 object-contain border border-slate-300 rounded-lg bg-white" />
+                          <button id="newVen_c2_card_remove" onclick="window.appActions.removeCardImage(2)" class="hidden absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow hover:bg-rose-600"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                  <button onclick="window.appActions.closeModal('addVendorModal')" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-300 transition cursor-pointer">ยกเลิก</button>
+                  <button id="vendorModalSaveBtn" onclick="window.appActions.saveNewVendor()" class="px-4 py-2 rounded-xl bg-amber-600 text-white font-semibold text-xs sm:text-sm hover:bg-amber-500 transition cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>บันทึกข้อมูลผู้ขาย</span>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+          document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+      },
+      openAddVendorModal() {
+        this.injectVendorModal();
+        state.editingVendorId = null;
+        document.getElementById('vendorModalTitle').textContent = 'เพิ่มรายชื่อผู้ขาย / ผู้ให้บริการ (Add Vendor)';
+        document.getElementById('vendorModalSaveBtn').innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>บันทึกข้อมูลผู้ขาย</span>';
+
+        const selectCostCode = document.getElementById('newVen_costCode');
+        const uniqueGroups = [];
+        const seen = new Set();
+        state.costCodes.forEach(c => {
+          if (!seen.has(c.costCode)) {
+            seen.add(c.costCode);
+            uniqueGroups.push({ code: c.costCode, name: c.categoryName });
+          }
+        });
+        selectCostCode.innerHTML = uniqueGroups.map(g => `<option value="${g.code}">${g.code} - ${g.name}</option>`).join('');
+        
+        const datalist = document.getElementById('existingVendorsList');
+        if (datalist) {
+          const uniqueVendors = [...new Set(state.vendors.map(v => v.vendorName).filter(Boolean))];
+          uniqueVendors.sort((a, b) => a.localeCompare(b, 'th'));
+          datalist.innerHTML = uniqueVendors.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+        }
+
+        document.getElementById('newVen_vendorName').value = '';
+        document.getElementById('newVen_c1_name').value = '';
+        document.getElementById('newVen_c1_phone').value = '';
+        document.getElementById('newVen_c1_email').value = '';
+        document.getElementById('newVen_c1_note').value = '';
+        document.getElementById('newVen_c2_name').value = '';
+        document.getElementById('newVen_c2_phone').value = '';
+        document.getElementById('newVen_c2_email').value = '';
+        document.getElementById('newVen_c2_note').value = '';
+        
+        this.removeCardImage(1);
+        this.removeCardImage(2);
+
+        const modal = document.getElementById('addVendorModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        this.handleVendorCostCodeChange();
+        if (window.lucide) window.lucide.createIcons();
+      },
+      openEditVendorModal(id) {
+        this.injectVendorModal();
+        const v = state.vendors.find(x => x.id === id);
+        if(!v) return;
+        state.editingVendorId = id;
+        
+        document.getElementById('vendorModalTitle').textContent = 'แก้ไขรายละเอียดผู้ขาย (Edit Vendor)';
+        document.getElementById('vendorModalSaveBtn').innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>บันทึกการแก้ไข</span>';
+        
+        const selectCostCode = document.getElementById('newVen_costCode');
+        const uniqueGroups = [];
+        const seen = new Set();
+        state.costCodes.forEach(c => {
+          if (!seen.has(c.costCode)) {
+            seen.add(c.costCode);
+            uniqueGroups.push({ code: c.costCode, name: c.categoryName });
+          }
+        });
+        selectCostCode.innerHTML = uniqueGroups.map(g => `<option value="${g.code}">${g.code} - ${g.name}</option>`).join('');
+        
+        selectCostCode.value = v.costCode;
+        this.handleVendorCostCodeChange(true);
+        const subCodeSelect = document.getElementById('newVen_subCostCode');
+        if (v.subCostCode && subCodeSelect.querySelector(`option[value="${v.subCostCode}"]`)) {
+            subCodeSelect.value = v.subCostCode;
+        }
+        
+        document.getElementById('newVen_vendorNo').value = v.vendorNo;
+        document.getElementById('newVen_vendorName').value = v.vendorName;
+        document.getElementById('newVen_c1_name').value = v.contactName1 || '';
+        document.getElementById('newVen_c1_phone').value = v.phone1 || '';
+        document.getElementById('newVen_c1_email').value = v.email1 || '';
+        document.getElementById('newVen_c1_note').value = v.note1 || '';
+        document.getElementById('newVen_c2_name').value = v.contactName2 || '';
+        document.getElementById('newVen_c2_phone').value = v.phone2 || '';
+        document.getElementById('newVen_c2_email').value = v.email2 || '';
+        document.getElementById('newVen_c2_note').value = v.note2 || '';
+
+        this.removeCardImage(1);
+        if(v.cardImage1) {
+            document.getElementById('newVen_c1_card_data').value = v.cardImage1;
+            const preview1 = document.getElementById('newVen_c1_card_preview');
+            preview1.src = v.cardImage1;
+            preview1.classList.remove('hidden');
+            document.getElementById('newVen_c1_card_remove').classList.remove('hidden');
+        }
+        
+        this.removeCardImage(2);
+        if(v.cardImage2) {
+            document.getElementById('newVen_c2_card_data').value = v.cardImage2;
+            const preview2 = document.getElementById('newVen_c2_card_preview');
+            preview2.src = v.cardImage2;
+            preview2.classList.remove('hidden');
+            document.getElementById('newVen_c2_card_remove').classList.remove('hidden');
+        }
+        
+        const datalist = document.getElementById('existingVendorsList');
+        if (datalist) {
+          const uniqueVendors = [...new Set(state.vendors.map(vendor => vendor.vendorName).filter(Boolean))];
+          uniqueVendors.sort((a, b) => a.localeCompare(b, 'th'));
+          datalist.innerHTML = uniqueVendors.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+        }
+
+        const modal = document.getElementById('addVendorModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        if (window.lucide) window.lucide.createIcons();
+      },
+      handleCardUpload(event, num) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result;
+          document.getElementById(`newVen_c${num}_card_data`).value = dataUrl;
+          const preview = document.getElementById(`newVen_c${num}_card_preview`);
+          preview.src = dataUrl;
+          preview.classList.remove('hidden');
+          document.getElementById(`newVen_c${num}_card_remove`).classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      },
+      removeCardImage(num) {
+        const dataField = document.getElementById(`newVen_c${num}_card_data`);
+        if(dataField) dataField.value = '';
+        const preview = document.getElementById(`newVen_c${num}_card_preview`);
+        if(preview) {
+          preview.src = '';
+          preview.classList.add('hidden');
+        }
+        const removeBtn = document.getElementById(`newVen_c${num}_card_remove`);
+        if(removeBtn) removeBtn.classList.add('hidden');
+      },
+      handleVendorCostCodeChange(isEdit = false) {
+        const costCodeSelect = document.getElementById('newVen_costCode');
+        const selectedCostCode = costCodeSelect.value;
+        const subCostCodeSelect = document.getElementById('newVen_subCostCode');
+        
+        const subGroups = state.costCodes.filter(c => c.costCode === selectedCostCode);
+        if (subGroups.length > 0) {
+           subCostCodeSelect.innerHTML = subGroups.map(s => `<option value="${s.subCostCode}">${s.subCostCode} - ${s.subCostCodeName}</option>`).join('');
+        } else {
+           subCostCodeSelect.innerHTML = `<option value="">ไม่มีหมวดงานย่อย</option>`;
+        }
+
+        if (!isEdit) {
+          const vendorsInGroup = state.vendors.filter(v => v.costCode === selectedCostCode);
+          let maxSeq = 0;
+          vendorsInGroup.forEach(v => {
+            if (v.vendorNo && v.vendorNo.startsWith('V' + selectedCostCode)) {
+               const seqStr = v.vendorNo.slice(-3);
+               const seq = parseInt(seqStr, 10);
+               if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+            }
+          });
+          const nextSeq = String(maxSeq + 1).padStart(3, '0');
+          document.getElementById('newVen_vendorNo').value = `V${selectedCostCode}${nextSeq}`;
+        }
+      },
+      handleVendorNameInput(val) {
+        const matchedVendor = state.vendors.find(v => v.vendorName === val);
+        if (matchedVendor) {
+          document.getElementById('newVen_c1_name').value = matchedVendor.contactName1 || '';
+          document.getElementById('newVen_c1_phone').value = matchedVendor.phone1 || '';
+          document.getElementById('newVen_c1_email').value = matchedVendor.email1 || '';
+          document.getElementById('newVen_c1_note').value = matchedVendor.note1 || '';
+          document.getElementById('newVen_c2_name').value = matchedVendor.contactName2 || '';
+          document.getElementById('newVen_c2_phone').value = matchedVendor.phone2 || '';
+          document.getElementById('newVen_c2_email').value = matchedVendor.email2 || '';
+          document.getElementById('newVen_c2_note').value = matchedVendor.note2 || '';
+          
+          this.removeCardImage(1);
+          if(matchedVendor.cardImage1) {
+              document.getElementById('newVen_c1_card_data').value = matchedVendor.cardImage1;
+              const preview1 = document.getElementById('newVen_c1_card_preview');
+              preview1.src = matchedVendor.cardImage1;
+              preview1.classList.remove('hidden');
+              document.getElementById('newVen_c1_card_remove').classList.remove('hidden');
+          }
+          this.removeCardImage(2);
+          if(matchedVendor.cardImage2) {
+              document.getElementById('newVen_c2_card_data').value = matchedVendor.cardImage2;
+              const preview2 = document.getElementById('newVen_c2_card_preview');
+              preview2.src = matchedVendor.cardImage2;
+              preview2.classList.remove('hidden');
+              document.getElementById('newVen_c2_card_remove').classList.remove('hidden');
+          }
+        }
+      },
+      saveNewVendor() {
+        const costCodeSelect = document.getElementById('newVen_costCode');
+        const subCostCodeSelect = document.getElementById('newVen_subCostCode');
+        const vendorName = document.getElementById('newVen_vendorName').value.trim();
+
+        if (!vendorName) {
+          showToast('กรุณาระบุชื่อบริษัทผู้ขาย (Vendor Name)', true);
+          return;
+        }
+
+        const costCodeStr = costCodeSelect.value;
+        const costCodeNameStr = costCodeSelect.options[costCodeSelect.selectedIndex]?.text.split(' - ')[1] || '';
+        const subCostCodeStr = subCostCodeSelect.value || '';
+        const subCostCodeNameStr = subCostCodeSelect.options[subCostCodeSelect.selectedIndex]?.text.split(' - ')[1] || '';
+
+        const vendorData = {
+          costCode: costCodeStr,
+          costCodeName: costCodeNameStr,
+          subCostCode: subCostCodeStr,
+          subCostCodeName: subCostCodeNameStr,
+          vendorNo: document.getElementById('newVen_vendorNo').value,
+          vendorName: vendorName,
+          contactName1: document.getElementById('newVen_c1_name').value.trim(),
+          phone1: document.getElementById('newVen_c1_phone').value.trim(),
+          email1: document.getElementById('newVen_c1_email').value.trim(),
+          note1: document.getElementById('newVen_c1_note').value.trim(),
+          cardImage1: document.getElementById('newVen_c1_card_data').value || '',
+          contactName2: document.getElementById('newVen_c2_name').value.trim(),
+          phone2: document.getElementById('newVen_c2_phone').value.trim(),
+          email2: document.getElementById('newVen_c2_email').value.trim(),
+          note2: document.getElementById('newVen_c2_note').value.trim(),
+          cardImage2: document.getElementById('newVen_c2_card_data').value || ''
+        };
+
+        if (state.editingVendorId) {
+          state.vendors = state.vendors.map(v => v.id === state.editingVendorId ? { ...v, ...vendorData } : v);
+          showToast('แก้ไขข้อมูลผู้ขายสำเร็จ!');
+        } else {
+          const newVendor = { id: 'v-' + Date.now(), ...vendorData };
+          state.vendors.unshift(newVendor);
+          showToast(`เพิ่มรายชื่อผู้ขาย ${vendorName} สำเร็จ!`);
+        }
+
+        this.closeModal('addVendorModal');
+        renderAll();
+      },
+      updateVendor(id, field, value) {
+        state.vendors = state.vendors.map((v) => (v.id === id ? { ...v, [field]: value } : v));
+        renderAll();
+      },
+      confirmDeleteVendor(id) {
+         state.deletingVendorId = id;
+         let modal = document.getElementById('confirmDeleteModal');
+         if(!modal) {
+             const modalHtml = `
+               <div id="confirmDeleteModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+                <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full flex flex-col overflow-hidden">
+                  <div class="p-6 text-center space-y-4">
+                    <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                      <i data-lucide="trash-2" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-bold text-lg text-slate-900">ยืนยันการลบข้อมูลผู้ขาย?</h3>
+                    <p class="text-sm text-slate-500">ข้อมูลผู้ขายที่ถูกลบไปแล้วจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ที่จะลบรายการนี้?</p>
+                  </div>
+                  <div class="p-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                    <button onclick="window.appActions.closeModal('confirmDeleteModal')" class="flex-1 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-300 transition cursor-pointer">ยกเลิก</button>
+                    <button onclick="window.appActions.executeDeleteVendor()" class="flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-500 transition cursor-pointer">ยืนยันการลบ</button>
+                  </div>
+                </div>
+               </div>
+             `;
+             document.body.insertAdjacentHTML('beforeend', modalHtml);
+             modal = document.getElementById('confirmDeleteModal');
+         }
+         modal.classList.remove('hidden');
+         modal.classList.add('flex');
+         if (window.lucide) window.lucide.createIcons();
+      },
+      executeDeleteVendor() {
+         if(state.deletingVendorId) {
+             state.vendors = state.vendors.filter(v => v.id !== state.deletingVendorId);
+             state.deletingVendorId = null;
+             this.closeModal('confirmDeleteModal');
+             renderAll();
+             showToast('ลบข้อมูลผู้ขายเรียบร้อยแล้ว');
+         }
+      },
+      viewCardImage(vendorId, num) {
+        const v = state.vendors.find(x => x.id === vendorId);
+        if(!v) return;
+        const imgData = num === 1 ? v.cardImage1 : v.cardImage2;
+        if(!imgData) {
+            showToast('ไม่พบรูปภาพนามบัตร', true);
+            return;
+        }
+
+        let modal = document.getElementById('viewCardModal');
+        if(!modal) {
+            const modalHtml = `
+              <div id="viewCardModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 no-print" onclick="window.appActions.closeModal('viewCardModal')">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+                  <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="image" class="w-5 h-5 text-sky-400"></i>
+                      <h3 class="font-bold text-base">รูปนามบัตรผู้ติดต่อ (Business Card)</h3>
+                    </div>
+                    <button onclick="window.appActions.closeModal('viewCardModal')" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer">
+                      <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                  </div>
+                  <div class="p-6 bg-slate-50 flex items-center justify-center min-h-[300px]">
+                    <img id="viewCardModalImg" src="" class="max-w-full max-h-[60vh] object-contain shadow-md border border-slate-200 rounded-lg" />
+                  </div>
+                  <div class="p-4 border-t border-slate-200 bg-white flex justify-end">
+                    <a id="viewCardModalDownload" href="#" download="business_card.png" class="px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold text-sm hover:bg-sky-500 transition cursor-pointer flex items-center gap-1.5">
+                      <i data-lucide="download" class="w-4 h-4"></i>
+                      <span>ดาวน์โหลดรูปภาพ</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('viewCardModal');
+            if(window.lucide) window.lucide.createIcons();
+        }
+        
+        document.getElementById('viewCardModalImg').src = imgData;
+        document.getElementById('viewCardModalDownload').href = imgData;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      },
+
+      injectAddProductModal() {
+        let modal = document.getElementById('addProductModal');
+        if (modal) modal.remove(); 
+        
+        const modalHtml = `
+          <div id="addProductModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full flex flex-col overflow-hidden">
+              <div class="p-4 bg-emerald-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="package-plus" class="w-5 h-5"></i>
+                  <h3 id="addProductModalTitle" class="font-bold text-base">เพิ่มรหัสสินค้าใหม่ (Add New Product)</h3>
+                </div>
+                <button onclick="window.appActions.closeModal('addProductModal')" class="p-1 rounded-lg hover:bg-emerald-700 text-emerald-100 hover:text-white cursor-pointer">
+                  <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+              </div>
+              <div class="p-5 overflow-y-auto max-h-[75vh]">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">1. หมวดงานย่อย (Sub Cost Code Name) <span class="text-rose-500">*</span></label>
+                    <select id="newProd_subCostCodeId" onchange="window.appActions.handleProdFormUpdate()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-emerald-500 focus:outline-none cursor-pointer"></select>
+                  </div>
+                  
+                  <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1">Cost Code</label>
+                      <input type="text" id="newProd_costCode" readonly class="w-full px-2.5 py-1.5 border border-slate-200 bg-slate-100/80 rounded text-sm font-mono-num font-bold text-slate-600 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1">Cost Code Name</label>
+                      <input type="text" id="newProd_costCodeName" readonly class="w-full px-2.5 py-1.5 border border-slate-200 bg-slate-100/80 rounded text-sm font-semibold text-slate-600 focus:outline-none" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1">Sub Cost Code</label>
+                      <input type="text" id="newProd_subCostCode" readonly class="w-full px-2.5 py-1.5 border border-slate-200 bg-slate-100/80 rounded text-sm font-mono-num font-bold text-slate-600 focus:outline-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">2. ยี่ห้อ / ผู้ขาย (Brand / Vendor Name) <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newProd_vendorName" list="prodVendorList" oninput="window.appActions.handleProdFormUpdate()" placeholder="พิมพ์เพื่อค้นหาผู้ขายจากฐานข้อมูล..." autocomplete="off" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-emerald-500 focus:outline-none font-bold" />
+                    <datalist id="prodVendorList"></datalist>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">รหัสผู้ขาย (Vendor ID)</label>
+                    <input type="text" id="newProd_vendorId" readonly class="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm font-mono-num font-bold text-amber-700 focus:outline-none" />
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">3. รายละเอียดสเปค (Spec Detail)</label>
+                    <input type="text" id="newProd_spec" oninput="window.appActions.handleProdFormUpdate()" placeholder="เช่น 665 Wp, ท่อ PVC 1/2 นิ้ว..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-emerald-500 focus:outline-none" />
+                  </div>
+                </div>
+
+                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 space-y-3">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                      <label class="block text-xs font-bold text-emerald-900 mb-1">ชื่อสินค้า (Product Name) - <span class="text-emerald-700 font-normal">สร้างอัตโนมัติ</span></label>
+                      <input type="text" id="newProd_name" readonly class="w-full px-3 py-2 border border-emerald-200 bg-white rounded-lg text-sm font-bold text-slate-800 focus:outline-none shadow-sm" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-emerald-900 mb-1">รหัสสินค้า (Product Code) - <span class="text-emerald-700 font-normal">สร้างอัตโนมัติ</span></label>
+                      <input type="text" id="newProd_productCode" readonly class="w-full px-3 py-2 border border-emerald-200 bg-white rounded-lg text-sm font-mono-num font-bold text-sky-700 focus:outline-none shadow-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">หน่วย (Unit) <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newProd_unit" value="Ea" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-center focus:border-emerald-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ค่าวัสดุ/หน่วย (Material Price)</label>
+                    <input type="number" id="newProd_matPrice" value="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-right focus:border-emerald-500 focus:outline-none font-mono-num" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ค่าแรง/หน่วย (Labor Price)</label>
+                    <input type="number" id="newProd_labPrice" value="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-right focus:border-emerald-500 focus:outline-none font-mono-num" />
+                  </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4 border-l-4 border-l-emerald-500">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">แนบใบเสนอราคา / สเปค (Quotation / Spec File)</label>
+                    <input type="file" id="newProd_quotationFile" accept="image/*,.pdf" onchange="window.appActions.handleProductQuotationUpload(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer" />
+                    <input type="hidden" id="newProd_quotationFileData" />
+                    <div id="newProd_quotationFileName" class="text-xs text-emerald-600 mt-2 font-semibold hidden"></div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">หมายเหตุการอัพเดทราคา (Remark)</label>
+                    <textarea id="newProd_updateRemark" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-emerald-500 focus:outline-none" placeholder="ระบุเหตุผลการอัพเดทราคา หรือรายละเอียดเพิ่มเติม..."></textarea>
+                  </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-white border border-slate-200 rounded-xl">
+                  <h4 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5"><i data-lucide="history" class="w-4 h-4 text-sky-600"></i> ตาราง Record การอัพเดทราคา</h4>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse whitespace-nowrap">
+                      <thead class="bg-slate-100 text-slate-700">
+                        <tr>
+                          <th class="p-2 border border-slate-200 text-center">ลำดับ</th>
+                          <th class="p-2 border border-slate-200">วันที่อัพเดท</th>
+                          <th class="p-2 border border-slate-200">Cost Code Name</th>
+                          <th class="p-2 border border-slate-200">Sub Cost Code Name</th>
+                          <th class="p-2 border border-slate-200 text-center">หน่วย (Unit)</th>
+                          <th class="p-2 border border-slate-200 text-right">ค่าของ (บาท/หน่วย)</th>
+                          <th class="p-2 border border-slate-200 text-right">ค่าแรง (บาท/หน่วย)</th>
+                          <th class="p-2 border border-slate-200 text-right">รวม (บาท)</th>
+                          <th class="p-2 border border-slate-200 text-center">ใบเสนอราคาไฟล์/รูปภาพแนบ</th>
+                          <th class="p-2 border border-slate-200">หมายเหตุ</th>
+                        </tr>
+                      </thead>
+                      <tbody id="newProd_priceHistoryBody">
+                        <tr>
+                          <td colspan="10" class="p-4 text-center text-slate-500 italic bg-slate-50">ไม่มีประวัติการอัปเดต (กำลังสร้างรายการใหม่)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+              <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button onclick="window.appActions.closeModal('addProductModal')" class="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-300 transition cursor-pointer">ยกเลิก</button>
+                <button id="btnSaveProduct" onclick="window.appActions.saveNewProduct()" class="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs sm:text-sm hover:bg-emerald-500 transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <span>บันทึกรหัสสินค้าใหม่</span>
+                </button>
+              </div>
+            </div>
+          </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+      },
+      openAddProductModal(editId = null) {
+        this.injectAddProductModal();
+        state.editingProductId = editId; 
+        
+        const sccSelect = document.getElementById('newProd_subCostCodeId');
+        const validCodes = state.costCodes.filter(c => c.subCostCode && c.subCostCodeName);
+        sccSelect.innerHTML = validCodes.map(c => `<option value="${c.id}">${c.subCostCodeName} (หมวด: ${c.categoryName})</option>`).join('');
+        
+        const vendorList = document.getElementById('prodVendorList');
+        const uniqueVendors = [...new Set(state.vendors.map(v => v.vendorName).filter(Boolean))];
+        uniqueVendors.sort((a, b) => a.localeCompare(b, 'th'));
+        vendorList.innerHTML = uniqueVendors.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+
+        if (editId && typeof editId === 'string') {
+            const p = state.productCodes.find(x => x.id === editId);
+            if (p) {
+                const matchedCC = validCodes.find(c => c.subCostCodeName === p.subCostCodeName && c.costCode === p.costCode);
+                if(matchedCC) sccSelect.value = matchedCC.id;
+                
+                document.getElementById('newProd_vendorName').value = p.vendorName || '';
+                document.getElementById('newProd_vendorId').value = p.vendorId || '';
+                document.getElementById('newProd_spec').value = p.spec || '';
+                document.getElementById('newProd_unit').value = p.unit || 'Ea';
+                document.getElementById('newProd_matPrice').value = p.matUnitPrice || 0;
+                document.getElementById('newProd_labPrice').value = p.labUnitPrice || 0;
+                
+                const remarkInput = document.getElementById('newProd_updateRemark');
+                if (remarkInput) remarkInput.value = '';
+
+                if(p.quotationFile) {
+                    document.getElementById('newProd_quotationFileData').value = p.quotationFile;
+                    const fileName = document.getElementById('newProd_quotationFileName');
+                    if(fileName) {
+                        fileName.textContent = 'มีไฟล์แนบอยู่แล้ว (คุณสามารถเลือกไฟล์ใหม่เพื่อแทนที่ได้)';
+                        fileName.classList.remove('hidden');
+                    }
+                }
+
+                const titleEl = document.getElementById('addProductModalTitle');
+                if(titleEl) titleEl.innerHTML = 'แก้ไขข้อมูลสินค้า (Edit Product)';
+                const btnSave = document.getElementById('btnSaveProduct');
+                if(btnSave) btnSave.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>บันทึกการแก้ไข</span>';
+
+                const tbody = document.getElementById('newProd_priceHistoryBody');
+                if(tbody) {
+                    let historyData = p.priceHistory || [];
+                    if (historyData.length === 0) {
+                        historyData = [{
+                            updatedAt: p.updatedAt || new Date().toISOString().slice(0, 10),
+                            costCodeName: p.costCodeName || '-',
+                            subCostCodeName: p.subCostCodeName || '-',
+                            unit: p.unit || 'Ea',
+                            matUnitPrice: p.matUnitPrice || 0,
+                            labUnitPrice: p.labUnitPrice || 0,
+                            quotationFile: p.quotationFile || '',
+                            remark: 'บันทึกเริ่มต้น'
+                        }];
+                    }
+
+                    tbody.innerHTML = historyData.map((h, index) => `
+                      <tr>
+                          <td class="p-2 border border-slate-200 text-center">${index + 1}</td>
+                          <td class="p-2 border border-slate-200 text-center">${escapeHtml(h.updatedAt)}</td>
+                          <td class="p-2 border border-slate-200 text-center">${escapeHtml(h.costCodeName)}</td>
+                          <td class="p-2 border border-slate-200 text-center">${escapeHtml(h.subCostCodeName)}</td>
+                          <td class="p-2 border border-slate-200 text-center">${escapeHtml(h.unit)}</td>
+                          <td class="p-2 border border-slate-200 text-right font-mono-num text-sky-700">${formatCurrency(h.matUnitPrice)}</td>
+                          <td class="p-2 border border-slate-200 text-right font-mono-num text-amber-700">${formatCurrency(h.labUnitPrice)}</td>
+                          <td class="p-2 border border-slate-200 text-right font-mono-num font-bold text-emerald-700">${formatCurrency(Number(h.matUnitPrice) + Number(h.labUnitPrice))}</td>
+                          <td class="p-2 border border-slate-200 text-center">
+                              ${h.quotationFile ? `<a href="${h.quotationFile}" target="_blank" class="text-sky-600 hover:underline"><i data-lucide="file-text" class="w-4 h-4 inline"></i> ดูเอกสารแนบ</a>` : '-'}
+                          </td>
+                          <td class="p-2 border border-slate-200 text-slate-500 text-xs">${escapeHtml(h.remark || '-')}</td>
+                      </tr>
+                    `).join('');
+                }
+
+                this.handleProdFormUpdate();
+                document.getElementById('newProd_productCode').value = p.productCode;
+                document.getElementById('newProd_name').value = p.name;
+            }
+        } else {
+            document.getElementById('newProd_vendorName').value = '';
+            document.getElementById('newProd_vendorId').value = '';
+            document.getElementById('newProd_spec').value = '';
+            document.getElementById('newProd_unit').value = 'Ea';
+            document.getElementById('newProd_matPrice').value = '0';
+            document.getElementById('newProd_labPrice').value = '0';
+
+            const fileInput = document.getElementById('newProd_quotationFile');
+            if (fileInput) fileInput.value = '';
+            const fileData = document.getElementById('newProd_quotationFileData');
+            if (fileData) fileData.value = '';
+            const fileName = document.getElementById('newProd_quotationFileName');
+            if (fileName) {
+                fileName.textContent = '';
+                fileName.classList.add('hidden');
+            }
+
+            const titleEl = document.getElementById('addProductModalTitle');
+            if(titleEl) titleEl.innerHTML = 'เพิ่มรหัสสินค้าใหม่ (Add New Product)';
+            const btnSave = document.getElementById('btnSaveProduct');
+            if(btnSave) btnSave.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>บันทึกรหัสสินค้าใหม่</span>';
+            
+            const tbody = document.getElementById('newProd_priceHistoryBody');
+            if(tbody) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-500 italic bg-slate-50">ไม่มีประวัติการอัปเดต (กำลังสร้างรายการใหม่)</td></tr>`;
+            }
+            
+            const remarkInput = document.getElementById('newProd_updateRemark');
+            if (remarkInput) remarkInput.value = '';
+
+            this.handleProdFormUpdate();
+        }
+
+        const modal = document.getElementById('addProductModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        if (window.lucide) window.lucide.createIcons();
+      },
+      handleProdFormUpdate() {
+        const subCostCodeId = document.getElementById('newProd_subCostCodeId').value;
+        const matchedCC = state.costCodes.find(c => c.id === subCostCodeId);
+        
+        const cc = matchedCC ? matchedCC.costCode : '';
+        const ccName = matchedCC ? matchedCC.categoryName : '';
+        const scc = matchedCC ? matchedCC.subCostCode : '';
+        const sccName = matchedCC ? matchedCC.subCostCodeName : '';
+
+        document.getElementById('newProd_costCode').value = cc;
+        document.getElementById('newProd_costCodeName').value = ccName;
+        document.getElementById('newProd_subCostCode').value = scc;
+
+        const vendorName = document.getElementById('newProd_vendorName').value.trim();
+        let vendorId = '';
+        const matchedVendor = state.vendors.find(v => v.vendorName === vendorName);
+        if (matchedVendor) {
+            vendorId = matchedVendor.vendorNo;
+        }
+        document.getElementById('newProd_vendorId').value = vendorId;
+
+        const spec = document.getElementById('newProd_spec').value.trim();
+
+        let pName = sccName;
+        if (spec) pName += ' ' + spec;
+        if (vendorName) pName += ' ' + vendorName;
+        document.getElementById('newProd_name').value = pName;
+
+        if (cc && scc && vendorId) {
+            const prefix = `P${cc}${scc}${vendorId}`;
+            const existing = state.productCodes.filter(p => p.productCode && p.productCode.startsWith(prefix));
+            let maxRun = 0;
+            existing.forEach(p => {
+                const runStr = p.productCode.slice(-4);
+                const runNum = parseInt(runStr, 10);
+                if (!isNaN(runNum) && runNum > maxRun) maxRun = runNum;
+            });
+            const nextRun = String(maxRun + 1).padStart(4, '0');
+            document.getElementById('newProd_productCode').value = prefix + nextRun;
+        } else {
+            document.getElementById('newProd_productCode').value = '';
+        }
+      },
+      handleProductQuotationUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result;
+          const dataField = document.getElementById('newProd_quotationFileData');
+          if (dataField) dataField.value = dataUrl;
+          
+          const nameField = document.getElementById('newProd_quotationFileName');
+          if (nameField) {
+              nameField.textContent = 'แนบไฟล์สำเร็จ: ' + file.name;
+              nameField.classList.remove('hidden');
+          }
+        };
+        reader.readAsDataURL(file);
+      },
+      saveNewProduct() {
+        const pCode = document.getElementById('newProd_productCode').value.trim();
+        const pName = document.getElementById('newProd_name').value.trim();
+        const vendorId = document.getElementById('newProd_vendorId').value.trim();
+        const vendorName = document.getElementById('newProd_vendorName').value.trim();
+
+        if (!vendorId || !vendorName) {
+            showToast('กรุณาพิมพ์หรือเลือกชื่อผู้ขายที่มีในระบบ เพื่อใช้รหัส Vendor ID', true);
+            return;
+        }
+
+        if (!pCode || !pName) {
+            showToast('ข้อมูลไม่ครบถ้วน กรุณากรอกข้อมูลให้ครบเพื่อสร้าง Product Code', true);
+            return;
+        }
+
+        const id = document.getElementById('newProd_subCostCodeId').value;
+        const matchedCC = state.costCodes.find(c => c.id === id);
+
+        const matPrice = Number(document.getElementById('newProd_matPrice').value) || 0;
+        const labPrice = Number(document.getElementById('newProd_labPrice').value) || 0;
+        const remark = document.getElementById('newProd_updateRemark').value.trim();
+        const fileData = document.getElementById('newProd_quotationFileData')?.value || '';
+        const unit = document.getElementById('newProd_unit').value.trim() || 'Ea';
+        const updatedAt = new Date().toISOString().slice(0, 10);
+
+        let priceHistory = [];
+
+        if (state.editingProductId) {
+            const oldP = state.productCodes.find(x => x.id === state.editingProductId);
+            priceHistory = oldP ? (oldP.priceHistory || []) : [];
+            
+            if (priceHistory.length === 0 && oldP) {
+                priceHistory.push({
+                    updatedAt: oldP.updatedAt || updatedAt,
+                    costCodeName: oldP.costCodeName || '-',
+                    subCostCodeName: oldP.subCostCodeName || '-',
+                    unit: oldP.unit || 'Ea',
+                    matUnitPrice: oldP.matUnitPrice || 0,
+                    labUnitPrice: oldP.labUnitPrice || 0,
+                    quotationFile: oldP.quotationFile || '',
+                    remark: 'บันทึกเริ่มต้น'
+                });
+            }
+
+            const latest = priceHistory[0];
+            const isChanged = !latest || latest.matUnitPrice !== matPrice || latest.labUnitPrice !== labPrice || latest.quotationFile !== fileData || remark !== '';
+
+            if (isChanged) {
+                priceHistory.unshift({
+                    updatedAt: updatedAt,
+                    costCodeName: document.getElementById('newProd_costCodeName').value,
+                    subCostCodeName: matchedCC ? matchedCC.subCostCodeName : '',
+                    unit: unit,
+                    matUnitPrice: matPrice,
+                    labUnitPrice: labPrice,
+                    quotationFile: fileData,
+                    remark: remark || 'อัพเดทราคา/รายละเอียด'
+                });
+            }
+        } else {
+            priceHistory.push({
+                updatedAt: updatedAt,
+                costCodeName: document.getElementById('newProd_costCodeName').value,
+                subCostCodeName: matchedCC ? matchedCC.subCostCodeName : '',
+                unit: unit,
+                matUnitPrice: matPrice,
+                labUnitPrice: labPrice,
+                quotationFile: fileData,
+                remark: remark || 'สร้างรายการใหม่'
+            });
+        }
+
+        const newProd = {
+            id: state.editingProductId || ('pc-' + Date.now()),
+            costCode: document.getElementById('newProd_costCode').value,
+            costCodeName: document.getElementById('newProd_costCodeName').value,
+            subCostCode: document.getElementById('newProd_subCostCode').value,
+            subCostCodeName: matchedCC ? matchedCC.subCostCodeName : '',
+            vendorId: vendorId,
+            vendorName: vendorName,
+            brand: vendorName, 
+            spec: document.getElementById('newProd_spec').value.trim(),
+            productCode: pCode,
+            name: pName,
+            unit: unit,
+            matUnitPrice: matPrice,
+            labUnitPrice: labPrice,
+            quotationFile: fileData,
+            priceHistory: priceHistory,
+            updatedAt: updatedAt
+        };
+
+        if (state.editingProductId) {
+            state.productCodes = state.productCodes.map(p => p.id === state.editingProductId ? {...p, ...newProd} : p);
+            showToast('แก้ไขข้อมูลสินค้าและอัปเดตราคาสำเร็จ!');
+        } else {
+            if(!state.productCodes) state.productCodes = [];
+            state.productCodes.unshift(newProd);
+            showToast('เพิ่มรหัสสินค้าใหม่เข้าสู่ Product Code Database สำเร็จ!');
+        }
+        
+        state.editingProductId = null; // คืนค่าตัวแปร
+        this.closeModal('addProductModal');
+        renderAll();
+      }
+    };
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let app = null;
+    let auth = null;
+    let db = null;
+    const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'boq-master-template';
+
+    try {
+      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
+    } catch (e) {
+      console.warn("Firebase Init Error:", e);
+    }
+
+    const showAuthToast = (msg, isError = false) => {
+      const box = document.getElementById('toastContainer');
+      const text = document.getElementById('toastMessage');
+      const icon = document.getElementById('toastIcon');
+      if (!box || !text) return;
+      text.textContent = msg;
+      icon.innerHTML = isError
+        ? '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>'
+        : '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>';
+      box.classList.remove('hidden');
+      box.classList.add('flex');
+      if (window.lucide) window.lucide.createIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+      }, 3200);
+    };
+
+    window.authActions = {
+      toggleMode(mode) {
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const authTitle = document.getElementById('authTitle');
+        if (mode === 'register') {
+          loginForm.classList.add('hidden');
+          registerForm.classList.remove('hidden');
+          authTitle.textContent = 'สมัครสมาชิก (Register)';
+        } else {
+          registerForm.classList.add('hidden');
+          loginForm.classList.remove('hidden');
+          authTitle.textContent = 'เข้าสู่ระบบ (Login)';
+        }
+      },
+      async login(e) {
+        e.preventDefault();
+        const email = document.getElementById('logEmail').value;
+        const pass = document.getElementById('logPass').value;
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerText;
+        btn.innerText = "กำลังเข้าสู่ระบบ...";
+        btn.disabled = true;
+
+        const ADMIN_EMAILS = ['admin@sldstudio.com', 'admin@BOQ.com', 'admin@admin.com']; 
+
+        // Local Admin Mode
+        if (ADMIN_EMAILS.includes(email) && pass === 'admin123') {
+          setTimeout(() => {
+             showAuthToast('เข้าสู่ระบบสำเร็จ (Admin Mode)');
+             document.getElementById('authContainer').classList.add('hidden');
+             document.getElementById('mainAppContainer').classList.remove('hidden');
+             document.getElementById('mainAppContainer').classList.add('flex');
+             
+             window.__updateCurrentUserProfile({ 
+                 uid: 'admin-local', 
+                 email: email, 
+                 name: email.split('@')[0], 
+                 role: 'Admin', 
+                 status: 'Approved' 
+             });
+
+             if (window.appActions && window.appActions.switchTab) window.appActions.switchTab('cover_sheet');
+          }, 800);
+          return;
+        }
+
+        if (!auth) {
+          setTimeout(() => {
+             showAuthToast('เข้าสู่ระบบสำเร็จ (Local Mode)');
+             document.getElementById('authContainer').classList.add('hidden');
+             document.getElementById('mainAppContainer').classList.remove('hidden');
+             document.getElementById('mainAppContainer').classList.add('flex');
+             
+             const isAdmin = ADMIN_EMAILS.includes(email);
+             window.__updateCurrentUserProfile({ 
+                 uid: 'user-local', 
+                 email: email, 
+                 name: email.split('@')[0], 
+                 role: isAdmin ? 'Admin' : 'Viewer', 
+                 status: isAdmin ? 'Approved' : 'Pending' 
+             });
+
+             if (window.appActions && window.appActions.switchTab) window.appActions.switchTab('cover_sheet');
+          }, 800);
+          return;
+        }
+
+        try {
+          await signInWithEmailAndPassword(auth, email, pass);
+          showAuthToast('เข้าสู่ระบบสำเร็จ');
+        } catch (error) {
+          showAuthToast("อีเมลหรือรหัสผ่านไม่ถูกต้อง", true);
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      },
+      async register(e) {
+        e.preventDefault();
+        const name = document.getElementById('regName').value;
+        const email = document.getElementById('regEmail').value;
+        const pass = document.getElementById('regPass').value;
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerText;
+        btn.innerText = "กำลังสร้างบัญชีและบันทึกลง Sheet...";
+        btn.disabled = true;
+
+        const generatedUid = 'user-local-' + Date.now();
+
+        // 1. ส่งข้อมูลไปบันทึกที่ Google Sheet
+        try {
+          const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzaACqPtv8pPTXUwv0JEKcJd3EbBsIy9UyM3HIkfSCP9stVpBonnItv8vqWK6lOLQkDfA/exec';
+          if (GOOGLE_SHEET_API_URL) {
+            await fetch(GOOGLE_SHEET_API_URL, {
+              method: 'POST',
+              mode: 'no-cors', // ใช้ no-cors เพื่อเลี่ยงปัญหา cross-origin เวลาส่งจากหน้าเว็บ
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'register',
+                uid: generatedUid,
+                name: name,
+                email: email,
+                password: pass,
+                timestamp: new Date().toLocaleString('th-TH')
+              })
+            });
+          }
+        } catch (err) {
+          console.error('Error saving to Google Sheet:', err);
+        }
+
+        const ADMIN_EMAILS = ['admin@sldstudio.com', 'admin@BOQ.com', 'admin@admin.com']; 
+
+        // 2. การเข้าระบบหลังจากบันทึกข้อมูลเสร็จ
+        if (!auth) {
+          setTimeout(() => {
+             showAuthToast('สมัครสมาชิกและบันทึกลง Google Sheet สำเร็จ');
+             document.getElementById('authContainer').classList.add('hidden');
+             document.getElementById('mainAppContainer').classList.remove('hidden');
+             document.getElementById('mainAppContainer').classList.add('flex');
+             
+             const isAdmin = ADMIN_EMAILS.includes(email);
+             window.__updateCurrentUserProfile({ 
+                 uid: generatedUid, 
+                 email: email, 
+                 name: name || email.split('@')[0], 
+                 role: isAdmin ? 'Admin' : 'Viewer', 
+                 status: isAdmin ? 'Approved' : 'Pending' 
+             });
+
+             if (window.appActions && window.appActions.switchTab) window.appActions.switchTab('cover_sheet');
+          }, 800);
+          return;
+        }
+
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+          await updateProfile(userCredential.user, { displayName: name });
+          showAuthToast('สมัครสมาชิกสำเร็จ ระบบกำลังเข้าสู่หน้าหลัก');
+        } catch (error) {
+          showAuthToast("เกิดข้อผิดพลาด: " + error.message, true);
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      },
+      async logout() {
+        if (!auth) {
+           location.reload();
+           return;
+        }
+        try {
+          await signOut(auth);
+          showAuthToast('ออกจากระบบแล้ว');
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    };
+
+    if (auth) {
+      onAuthStateChanged(auth, (user) => {
+        const authContainer = document.getElementById('authContainer');
+        const mainAppContainer = document.getElementById('mainAppContainer');
+        const ADMIN_EMAILS = ['admin@sldstudio.com', 'admin@BOQ.com', 'admin@admin.com']; 
+        
+        if (user) {
+          authContainer.classList.add('opacity-0', 'pointer-events-none');
+          setTimeout(() => {
+            authContainer.classList.add('hidden');
+            mainAppContainer.classList.remove('hidden');
+            mainAppContainer.classList.add('flex');
+          }, 500);
+
+          const nameEl = document.getElementById('displayUserName');
+          if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
+
+          if (db) {
+             const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'app_users', user.uid);
+             getDoc(userRef).then(docSnap => {
+                 const isAdmin = ADMIN_EMAILS.includes(user.email);
+                 if (!docSnap.exists()) {
+                     const newUser = {
+                         uid: user.uid,
+                         email: user.email,
+                         name: user.displayName || user.email?.split('@')[0] || 'Unknown',
+                         role: isAdmin ? 'Admin' : 'Viewer',
+                         status: isAdmin ? 'Approved' : 'Pending',
+                         createdAt: new Date().toISOString()
+                     };
+                     setDoc(userRef, newUser);
+                     window.__updateCurrentUserProfile(newUser);
+                 } else {
+                     let data = docSnap.data();
+                     if (isAdmin && data.role !== 'Admin') {
+                         data.role = 'Admin';
+                         data.status = 'Approved';
+                         updateDoc(userRef, { role: 'Admin', status: 'Approved' });
+                     }
+                     window.__updateCurrentUserProfile(data);
+                 }
+                 
+                 onSnapshot(userRef, (snap) => {
+                     if(snap.exists()) window.__updateCurrentUserProfile(snap.data());
+                 });
+                 
+                 onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'app_users'), (snapshot) => {
+                     const usersList = [];
+                     snapshot.forEach(d => usersList.push(d.data()));
+                     usersList.sort((a,b) => (a.status === 'Pending' ? -1 : 1) - (b.status === 'Pending' ? -1 : 1));
+                     window.__updateAppUsersList(usersList);
+                 });
+             });
+          }
+
+        } else {
+          authContainer.classList.remove('hidden');
+          mainAppContainer.classList.add('hidden');
+          mainAppContainer.classList.remove('flex');
+          setTimeout(() => {
+            authContainer.classList.remove('opacity-0', 'pointer-events-none');
+          }, 50);
+        }
+      });
+    } else {
+       document.getElementById('authContainer').classList.remove('hidden');
+       document.getElementById('mainAppContainer').classList.add('hidden');
+       if (window.appActions && window.appActions.switchTab) window.appActions.switchTab('cover_sheet');
+    }
+  </script>
+</body>
+</html>
